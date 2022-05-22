@@ -1,0 +1,2030 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>The Prime Factor and Winograd Fourier Transform Algorithms</title>
+  <metadata>
+  <md:content-id>m16335</md:content-id><md:title>The Prime Factor and Winograd Fourier Transform Algorithms</md:title>
+  <md:abstract/>
+  <md:uuid>bd239004-31b8-4606-a3c7-267814295100</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">The prime factor algorithm (PFA) and the Winograd Fourier
+transform algorithm (WFTA) are methods for efficiently calculating
+the DFT which use, and in fact, depend on the Type-1 index map from
+<link document="m16326" target-id="uid14">Multidimensional Index Mapping: Equation 10</link> and <link document="m16326" target-id="uid7">Multidimensional Index Mapping: Equation 6</link>. The use of this index map preceded Cooley
+and Tukey's paper <link target-id="bid0"/>, <link target-id="bid1"/> but its full potential was not
+realized until it was combined with Winograd's short DFT algorithms.
+The modern PFA was first presented in <link target-id="bid2"/> and a program
+given in <link target-id="bid3"/>. The WFTA was first presented in <link target-id="bid4"/>
+and programs given in <link target-id="bid5"/>, <link target-id="bid6"/>.</para>
+    <para id="id2255595">The number theoretic basis for the indexing in these
+algorithms may, at first, seem more complicated than in the
+Cooley-Tukey FFT; however, if approached from the general index
+mapping point of view of <link document="m16326">Multidimensional Index Mapping</link>, it is straightforward,
+and part of a common approach to breaking large problems into
+smaller ones. The development in this section will parallel that in
+<link document="m16334">The Cooley-Tukey Fast Fourier Transform Algorithm</link>.</para>
+    <para id="id2255608">The general index maps of <link document="m16326" target-id="uid7">Multidimensional Index Mapping: Equation 6</link> and <link document="m16326" target-id="uid17">Multidimensional Index Mapping: Equation 12</link> must satisfy the
+Type-1 conditions of <link document="m16326" target-id="uid9">Multidimensional Index Mapping: Equation 7</link> and <link document="m16326" target-id="uid14">Multidimensional Index Mapping: Equation 10</link> which are</para>
+    <equation id="uid1">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>a</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>and</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>b</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>with</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msub>
+              <m:mi>K</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msub>
+              <m:mi>K</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mn>1</m:mn>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <equation id="uid2">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>3</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>c</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>and</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>4</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>d</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>with</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msub>
+              <m:mi>K</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msub>
+              <m:mi>K</m:mi>
+              <m:mn>4</m:mn>
+            </m:msub>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mn>1</m:mn>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2255889">The row and column calculations in <link document="m16326" target-id="uid20">Multidimensional Index Mapping: Equation 15</link> are uncoupled by
+<link document="m16326" target-id="uid21">Multidimensional Index Mapping: Equation 16</link> which for this case are</para>
+    <equation id="uid3">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mn>0</m:mn>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2254891">In addition, to make each short sum a DFT, the <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> must also
+satisfy</para>
+    <equation id="uid4">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mi>a</m:mi>
+          <m:mi>n</m:mi>
+          <m:mi>d</m:mi>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256347">In order to have the smallest values for <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math>, the constants in
+<link target-id="uid1"/> are chosen to be</para>
+    <equation id="uid5">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>a</m:mi>
+          <m:mo>=</m:mo>
+          <m:mi>b</m:mi>
+          <m:mo>=</m:mo>
+          <m:mn>1</m:mn>
+          <m:mo>,</m:mo>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mi>c</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msubsup>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mn>1</m:mn>
+                  </m:mrow>
+                </m:msubsup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>,</m:mo>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mi>d</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msubsup>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mn>1</m:mn>
+                  </m:mrow>
+                </m:msubsup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256474">which gives for the index maps in
+<link target-id="uid1"/></para>
+    <equation id="uid6">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>n</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <equation id="uid7">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>k</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256611">The frequency index map is a form of the Chinese remainder theorem.
+Using these index maps, the DFT in <link document="m16326" target-id="uid20">Multidimensional Index Mapping: Equation 15</link> becomes</para>
+    <equation id="uid8"><m:math mode="display">
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mo>=</m:mo>
+          <m:munderover>
+<m:mrow>
+            <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:munderover>
+<m:mrow>         
+   <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:mi>x</m:mi>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256768">which is a pure two-dimensional DFT with no twiddle factors and the
+summations can be done in either order. Choices other than
+<link target-id="uid5"/> could be used. For example, <m:math><m:mrow><m:mi>a</m:mi><m:mo>=</m:mo><m:mi>b</m:mi><m:mo>=</m:mo><m:mi>c</m:mi><m:mo>=</m:mo><m:mi>d</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math> will
+cause the input and output index map to be the same and, therefore,
+there will be no scrambling of the output order. The short
+summations in (96), however, will no longer be short DFT's
+<link target-id="bid3"/>.</para>
+    <para id="id2256814">An important feature of the short Winograd DFT's described
+in <link document="m16333">Winograd’s Short DFT Algorithms</link> that is useful for both the PFA and WFTA is the
+fact that the multiplier constants in <link document="m16333" target-id="uid5">Winograd’s Short DFT Algorithms: Equation 6</link> or <link document="m16333" target-id="uid6">Winograd’s Short DFT Algorithms: Equation 8</link> are
+either real or imaginary, never a general complex number. For that
+reason, multiplication by complex data requires only two real
+multiplications, not four. That is a very significant feature. It is
+also true that the <m:math><m:mi>j</m:mi></m:math> multiplier can be commuted from the <m:math><m:mi>D</m:mi></m:math>
+operator to the last part of the <m:math><m:msup><m:mi>A</m:mi><m:mi>T</m:mi></m:msup></m:math> operator. This means the <m:math><m:mi>D</m:mi></m:math>
+operator has only real multipliers and the calculations on real data
+remains real until the last stage. This can be seen by examining the
+short DFT modules in <link target-id="bid7"/>, <link target-id="bid8"/> and in the appendices.</para>
+    <section id="uid9">
+      <title>The Prime Factor Algorithm</title>
+      <para id="id2256891">If the DFT is calculated directly using <link target-id="uid8"/>, the algorithm
+is called a prime factor algorithm <link target-id="bid0"/>, <link target-id="bid1"/> and was
+discussed in <link document="m16333">Winograd’s Short DFT Algorithms</link> and <link document="m16326" target-id="uid34">Multidimensional Index Mapping: In-Place Calculation of the DFT and Scrambling</link>. When the short DFT's
+are calculated by the very efficient algorithms of Winograd
+discussed in <link document="m16330">Factoring the Signal Processing Operators</link>, the PFA becomes a very powerful
+method that is as fast or faster than the best Cooley-Tukey FFT's
+<link target-id="bid3"/>, <link target-id="bid2"/>.</para>
+      <para id="id2256931">A flow graph is not as helpful with the PFA as it was with
+the Cooley-Tukey FFT, however, the following representation in
+<link target-id="uid10"/> which combines Figures <link document="m16326" target-id="uid25">Multidimensional Index Mapping: Figure 1</link> and <link document="m16333" target-id="uid24">Winograd’s Short DFT Algorithms: Figure 2</link> gives a good picture of the
+algorithm with the example of <link document="m16326" target-id="uid33">Multidimensional Index Mapping: Equation 25</link></para>
+      <figure id="uid10" orient="horizontal"><media id="id1883765" alt="This is a three-dimensional figure of five flat rectangles stacked together and rotated horizontally, and three flat shapes stacked together and rotated vertically with flat side facing front, and numerous lines passing through the shapes from left to right. The lines from top to bottom are spread out sporadically in no discernible pattern, and are labeled from top to bottom on the left side of the figure, 10, 5, 0, 8, 3, 11, 6, 14, 9, 2, 12. On the right side of the figure, they are labeled from top to bottom, 5, 10, 11, 0, 1, 2, 6, 7, 8, 12, 13, 14, 3, 4, 9. Each shape, both the vertical and horizontally oriented shapes, are divided into three sections with lines perpendicular to the numbered lines across the page. These sections are labeled from left to right, +, x, +, on each shape."><image src="../../media/File0020.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/File0020.eps" mime-type="application/postscript" print-width="3in"/></media><caption>A Prime Factor FFT for N = 15</caption></figure>
+      <para id="id2256960">If <m:math><m:mi>N</m:mi></m:math> is factored into three factors, the DFT of <link target-id="uid8"/> would
+have three nested summations and would be a three-dimensional DFT.
+This principle extends to any number of factors; however, recall
+that the Type-1 map requires that all the factors be relatively
+prime. A very simple three-loop indexing scheme has been developed
+<link target-id="bid3"/> which gives a compact, efficient PFA program for any
+number of factors. The basic program structure is illustrated in
+<link target-id="uid11"/> with the short DFT's being omitted for clarity. Complete
+programs are given in <link target-id="bid7"/> and in the appendices.</para>
+      <code id="uid11" display="block" class="listing">C---------------PFA INDEXING LOOPS--------------
+                DO 10 K = 1, M
+                   N1 = NI(K)
+                   N2 = N/N1
+                   I(1) = 1
+                   DO 20 J = 1, N2
+                      DO 30 L=2, N1
+                         I(L) = I(L-1) + N2
+                         IF (I(L .GT.N)  I(L) = I(L) - N
+           30         CONTINUE
+                      GOTO (20,102,103,104,105), N1
+                      I(1) = I(1) + N1
+           20      CONTINUE
+           10   CONTINUE
+                RETURN
+        C----------------MODULE FOR N=2-----------------
+          102   R1       = X(I(1))
+                X(I(1))  = R1 + X(I(2))
+                X(I(2))  = R1 - X(I(2))
+                R1       = Y(I(1))
+                Y(I(1))  = R1 + Y(I(2))
+                Y(I(2))  = R1 - Y(I(2))
+                GOTO 20
+        C----------------OTHER MODULES------------------
+          103   Length-3 DFT
+          104   Length-4 DFT
+          105   Length-5 DFT
+                etc.
+ 
+ 
+<caption>Part of a FORTRAN PFA Program</caption></code>
+      <para id="id2257480">As in the Cooley-Tukey program, the DO 10 loop steps through the M
+stages (factors of N) and the DO 20 loop calculates the N/N1  length-N1
+DFT's. The input index map of <link target-id="uid6"/> is implemented in the DO 30
+loop and the statement just before label 20. In the PFA, each stage
+or factor requires a separately programmed module or butterfly. This
+lengthens the PFA program but an efficient Cooley-Tukey program will
+also require three or more butterflies.</para>
+      <para id="id2257495">Because the PFA is calculated in-place using the input index
+map, the output is scrambled. There are five approaches to dealing
+with this scrambled output. First, there are some applications where
+the output does not have to be unscrambled as in the case of
+high-speed convolution. Second, an unscrambler can be added after
+the PFA to give the output in correct order just as the
+bit-reversed-counter is used for the Cooley-Tukey FFT. A simple
+unscrambler is given in <link target-id="bid7"/>, <link target-id="bid3"/> but it is not in place. The
+third method does the unscrambling in the modules while they are
+being calculated. This is probably the fastest method but the
+program must be written for a specific length <link target-id="bid7"/>, <link target-id="bid3"/>. A
+fourth method is similar and achieves the unscrambling by choosing
+the multiplier constants in the modules properly <link target-id="bid8"/>. The
+fifth method uses a separate indexing method for the input and
+output of each module <link target-id="bid7"/>, <link target-id="bid9"/>.</para>
+    </section>
+    <section id="uid12">
+      <title>The Winograd Fourier Transform Algorithm</title>
+      <para id="id2257558">The Winograd Fourier transform algorithm (WFTA) uses a very
+powerful property of the Type-1 index map and the DFT to give a
+further reduction of the number of multiplications in the PFA. Using
+an operator notation where <m:math><m:msub><m:mi>F</m:mi><m:mn>1</m:mn></m:msub></m:math> represents taking row DFT's and
+<m:math><m:msub><m:mi>F</m:mi><m:mn>2</m:mn></m:msub></m:math> represents column DFT's, the two-factor PFA of <link target-id="uid8"/> is
+represented by</para>
+      <equation id="uid13">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>F</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>F</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257641">It has been shown <link target-id="bid10"/>, <link target-id="bid11"/> that if
+each operator represents identical operations on each row or column,
+they commute. Since <m:math><m:msub><m:mi>F</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>F</m:mi><m:mn>2</m:mn></m:msub></m:math> represent length <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math>
+DFT's, they commute and <link target-id="uid13"/> can also be written</para>
+      <equation id="uid14">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>F</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>F</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257762">If each short DFT in <m:math><m:mi>F</m:mi></m:math> is expressed by
+three operators as in 
+<link document="m16333" target-id="uid6">Winograd’s Short DFT Algorithms: Equation 8</link> and <link document="m16333" target-id="uid24">Winograd’s Short DFT Algorithms: Figure 2</link>, <m:math><m:mi>F</m:mi></m:math> can be factored
+as</para>
+      <equation id="uid15">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>A</m:mi>
+              <m:mi>T</m:mi>
+            </m:msup>
+            <m:mi>D</m:mi>
+            <m:mi>A</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257818">where A represents the set of additions
+done on each row or column that performs the residue reduction as
+<link document="m16333" target-id="uid21">Winograd’s Short DFT Algorithms: Equation 30</link>. Because of the appearance of the flow graph of <m:math><m:mi>A</m:mi></m:math> and
+because it is the first operator on <m:math><m:mi>x</m:mi></m:math>, it is called a preweave
+operator <link target-id="bid5"/>. <m:math><m:mi>D</m:mi></m:math> is the set of <m:math><m:mi>M</m:mi></m:math> multiplications and
+<m:math><m:msup><m:mi>A</m:mi><m:mi>T</m:mi></m:msup></m:math> (or <m:math><m:msup><m:mi>B</m:mi><m:mi>T</m:mi></m:msup></m:math> or <m:math><m:msup><m:mi>C</m:mi><m:mi>T</m:mi></m:msup></m:math>) from <link document="m16333" target-id="uid4">Winograd’s Short DFT Algorithms: Equation 5</link> or <link document="m16333" target-id="uid5">Winograd’s Short DFT Algorithms: Equation 6</link> is the
+reconstruction operator called the postweave. Applying <link target-id="uid15"/>
+to <link target-id="uid13"/> gives</para>
+      <equation id="uid16">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258017">This is the PFA of <link target-id="uid8"/> and <link target-id="uid10"/> where <m:math><m:mrow><m:msub><m:mi>A</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>D</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>A</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math>
+represents the row DFT's on the array formed from <m:math><m:mi>x</m:mi></m:math>. Because these
+operators commute, <link target-id="uid16"/> can also be written as</para>
+      <equation id="uid17">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258165">or</para>
+      <equation id="uid18">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258261">but the two adjacent multiplication
+operators can be premultiplied and the result represented by one
+operator <m:math><m:mrow><m:mi>D</m:mi><m:mo>=</m:mo><m:msub><m:mi>D</m:mi><m:mn>2</m:mn></m:msub><m:mspace width="4pt"/><m:msub><m:mi>D</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math> which is no longer the same for each row or
+column. Equation <link target-id="uid18"/> becomes</para>
+      <equation id="uid19">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:mi>D</m:mi>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258380">This is the basic idea of the Winograd Fourier transform algorithm.
+The commuting of the multiplication operators together in the center
+of the algorithm is called nesting and it results in a significant
+decrease in the number of multiplications that must be done at the
+execution of the algorithm. Pictorially, the PFA of <link target-id="uid10"/> becomes
+<link target-id="bid2"/> the WFTA in <link target-id="uid20"/>.</para>
+      <figure id="uid20" orient="horizontal"><media id="id8471902" alt="This is a three dimensional figure of six stacks of four-sided two dimensional shapes. Through the shapes are an assortment of horizontal, parallel lines, roughly the same length, and passing through completely from one side of the figure to the other. The stacked shapes will be described from left to right. The first stack is of a set of 5 rectangles each labeled with a +, oriented so that their + sign in the center of the rectangle is pointed up. The second stack is three four-sided shapes also labeled, +, with the label facing diagonally towards the forward and left side of the figure. The third stack is a series of six rectangles labeled X, with the label and shapes facing up. The fourth stack is three long rectangles labeled X facing directly forward. The fifth stack is three rectangles labeled, +, facing diagonally forward and towards the right. The sixth stack is five rectangles labeled + and facing up, identical in appearance to the first stack."><image src="../../media/File0022.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/File0022.eps" mime-type="application/postscript" print-width="3in"/></media><caption>A Length-15 WFTA with Nested Multiplications</caption></figure>
+      <para id="id2258416">The rectangular structure of the preweave addition operators
+causes an expansion of the data in the center of the algorithm. The
+15 data points in <link target-id="uid20"/> become 18 intermediate values. This
+expansion is a major problem in programming the WFTA because it
+prevents a straightforward in-place calculation and causes an
+increase in the number of required additions and in the number of
+multiplier constants that must be precalculated and stored.</para>
+      <para id="id2258431">From <link target-id="uid20"/> and the idea of premultiplying the individual
+multiplication operators, it can be seen why the multiplications by
+unity had to be considered in <link document="m16333" target-id="element-176">Winograd’s Short DFT Algorithms: Table 1</link>. Even if a multiplier in <m:math><m:msub><m:mi>D</m:mi><m:mn>1</m:mn></m:msub></m:math>
+is unity, it may not be in <m:math><m:mrow><m:msub><m:mi>D</m:mi><m:mn>2</m:mn></m:msub><m:msub><m:mi>D</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math>. In <link target-id="uid20"/> with factors of
+three and five, there appear to be 18 multiplications required
+because of the expansion of the length-5 preweave operator, <m:math><m:msub><m:mi>A</m:mi><m:mn>2</m:mn></m:msub></m:math>,
+however, one of multipliers in each of the length three and five
+operators is unity, so one of the 18 multipliers in the product is
+unity. This gives 17 required multiplications - a rather impressive
+reduction from the <m:math><m:mrow><m:msup><m:mn>15</m:mn><m:mn>2</m:mn></m:msup><m:mo>=</m:mo><m:mn>225</m:mn></m:mrow></m:math> multiplications required by direct
+calculation. This number of 17 complex multiplications will require
+only 34 real multiplications because, as mentioned earlier, the
+multiplier constants are purely real or imaginary while the 225
+complex multiplications are general and therefore will require four
+times as many real multiplications.</para>
+      <para id="id2258533">The number of additions depends on the order of the pre- and
+postweave operators. For example in the length-15 WFTA in <link target-id="uid20"/>,
+if the length-5 had been done first and last, there would have been
+six row addition preweaves in the preweave operator rather than the
+five shown. It is difficult to illustrate the algorithm for three or
+more factors of N, but the ideas apply to any number of factors.
+Each length has an optimal ordering of the pre- and postweave
+operators that will minimize the number of additions.</para>
+      <para id="id2258549">A program for the WFTA is not as simple as for the FFT or
+PFA because of the very characteristic that reduces the number of
+multiplications, the nesting. A simple two-factor example program is
+given in <link target-id="bid7"/> and a general program can be found in
+<link target-id="bid5"/>, <link target-id="bid6"/>. The same lengths are possible with the PFA and
+WFTA and the same short DFT modules can be used, however, the
+multiplies in the modules must occur in one place for use in the
+WFTA.</para>
+    </section>
+    <section id="uid21">
+      <title>Modifications of the PFA and WFTA Type Algorithms</title>
+      <para id="id2258584">In the previous section it was seen how using the
+permutation property of the elementary operators in the PFA allowed
+the nesting of the multiplications to reduce their number. It was
+also seen that a proper ordering of the operators could minimize the
+number of additions. These ideas have been extended in formulating a
+more general algorithm optimizing problem. If the DFT operator <m:math><m:mi>F</m:mi></m:math>
+in <link target-id="uid15"/> is expressed in a still more factored form obtained
+from <link document="m16333" target-id="uid21">Winograd’s Short DFT Algorithms: Equation 30</link>, a greater variety of ordering can be optimized. For
+example if the <m:math><m:mi>A</m:mi></m:math> operators have two factors</para>
+      <equation id="uid22">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>F</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mrow>
+                <m:mo>'</m:mo>
+                <m:mi>T</m:mi>
+              </m:mrow>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mo>'</m:mo>
+            </m:msubsup>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258700">The DFT in <link target-id="uid14"/> becomes</para>
+      <equation id="uid23">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mo>=</m:mo>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:msubsup>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>A</m:mi>
+                  <m:mo>'</m:mo>
+                </m:msup>
+              </m:mrow>
+              <m:mn>2</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>A</m:mi>
+                  <m:mo>'</m:mo>
+                </m:msup>
+              </m:mrow>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msubsup>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:msubsup>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>A</m:mi>
+                  <m:mo>'</m:mo>
+                </m:msup>
+              </m:mrow>
+              <m:mn>1</m:mn>
+              <m:mi>T</m:mi>
+            </m:msubsup>
+            <m:msub>
+              <m:mi>D</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>A</m:mi>
+                  <m:mo>'</m:mo>
+                </m:msup>
+              </m:mrow>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>A</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mi>x</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258842">The operator notation is very helpful in understanding the central
+ideas, but may hide some important facts. It has been shown
+<link target-id="bid10"/>, <link target-id="bid8"/> that operators in different <m:math><m:msub><m:mi>F</m:mi><m:mi>i</m:mi></m:msub></m:math> commute with
+each other, but the order of the operators within an <m:math><m:msub><m:mi>F</m:mi><m:mi>i</m:mi></m:msub></m:math> cannot be
+changed. They represent the matrix multiplications in <link document="m16333" target-id="uid21">Winograd’s Short DFT Algorithms: Equation 30</link> or
+<link document="m16333" target-id="uid6">Winograd’s Short DFT Algorithms: Equation 8</link> which do not commute.</para>
+      <para id="id2258895">This formulation allows a very large set of possible
+orderings, in fact, the number is so large that some automatic
+technique must be used to find the “best". It is possible to set up
+a criterion of optimality that not only includes the number of
+multiplications but the number of additions as well. The effects of
+relative multiply-add times, data transfer times, CPU register and
+memory sizes, and other hardware characteristics can be included in
+the criterion. Dynamic programming can then be applied to derive an
+optimal algorithm for a particular application <link target-id="bid11"/>. This is a
+very interesting idea as there is no longer a single algorithm, but
+a class and an optimizing procedure. The challenge is to generate a
+broad enough class to result in a solution that is close to a global
+optimum and to have a practical scheme for finding the solution.</para>
+      <para id="id2258923">Results obtained applying the dynamic programming method to
+the design of fairly long DFT algorithms gave algorithms that had
+fewer multiplications and additions than either a pure PFA or WFTA
+<link target-id="bid11"/>. It seems that some nesting is desirable but not total
+nesting for four or more factors. There are also some interesting
+possibilities in mixing the Cooley-Tukey with this formulation.
+Unfortunately, the twiddle factors are not the same for all rows and
+columns, therefore, operations cannot commute past a twiddle factor
+operator. There are ways of breaking the total algorithm into
+horizontal paths and using different orderings along the different
+paths <link target-id="bid12"/>, <link target-id="bid8"/>. In a sense, this is what the split-radix
+FFT does with its twiddle factors when compared to a conventional
+Cooley-Tukey FFT.</para>
+      <para id="id2258956">There are other modifications of the basic structure of the
+Type-1 index map DFT algorithm. One is to use the same index
+structure and conversion of the short DFT's to convolution as the
+PFA but to use some other method for the high-speed convolution.
+Table look-up of partial products based on distributed arithmetic to
+eliminate all multiplications <link target-id="bid13"/> looks promising for
+certain very specific applications, perhaps for specialized VLSI
+implementation. Another possibility is to calculate the short
+convolutions using number-theoretic transforms
+<link target-id="bid14"/>, <link target-id="bid5"/>, <link target-id="bid12"/>. This would also require special hardware.
+Direct calculation of short convolutions is faster on certain
+pipelined processor such as the TMS-320 microprocessor <link target-id="bid15"/>.</para>
+    </section>
+    <section id="uid24">
+      <title>Evaluation of the PFA and WFTA</title>
+      <para id="id2259007">As for the Cooley-Tukey FFT's, the first evaluation of these
+algorithms will be on the number of multiplications and additions
+required. The number of multiplications to compute the PFA in
+<link target-id="uid8"/> is given by <link document="m16326" target-id="uid4">Multidimensional Index Mapping: Equation 3</link>. Using the notation that <m:math><m:mrow><m:mi>T</m:mi><m:mo>(</m:mo><m:mi>N</m:mi></m:mrow></m:math>) is
+the number of multiplications or additions necessary to calculate a
+length-N DFT, the total number for a four-factor PFA of length-N,
+where <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>3</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>4</m:mn></m:msub></m:mrow></m:math> is</para>
+      <equation id="uid25">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>T</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>4</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>4</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>4</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>4</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>3</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2259259">The count of multiplies and adds in <link target-id="uid27"/> are calculated from
+(105) with the counts of the factors taken from <link document="m16333" target-id="element-176">Winograd’s Short DFT Algorithms: Table 1</link>. The list of
+lengths are those possible with modules in the program of length 2,
+3, 4, 5, 7, 8, 9 and 16 as is true for the PFA in <link target-id="bid7"/>, <link target-id="bid3"/>
+and the WFTA in <link target-id="bid5"/>, <link target-id="bid6"/>. A maximum of four relatively prime
+lengths can be used from this group giving 59 different lengths over
+the range from 2 to 5040. The radix-2 or split-radix FFT allows 12
+different lengths over the same range. If modules of length 11 and
+13 from <link target-id="bid16"/> are added, the maximum length becomes 720720
+and the number of different lengths becomes 239. Adding modules for
+17, 19 and 25 from <link target-id="bid16"/> gives a maximum length of
+1163962800 and a very large and dense number of possible lengths.
+The length of the code for the longer modules becomes excessive and
+should not be included unless needed.</para>
+      <para id="id2259316">The number of multiplications necessary for the WFTA is
+simply the product of those necessary for the required modules,
+including multiplications by unity. The total number may contain
+some unity multipliers but it is difficult to remove them in a
+practical program. <link target-id="uid27"/> contains both the total number (MULTS)
+and the number with the unity multiplies removed (RMULTS).</para>
+      <para id="id2259330">Calculating the number of additions for the WFTA is more
+complicated than for the PFA because of the expansion of the data
+moving through the algorithm. For example the number of additions,
+TA, for the length-15 example in <link target-id="uid20"/> is given by</para>
+      <equation id="uid26">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>T</m:mi>
+            <m:mi>A</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mi>A</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:mi>T</m:mi>
+            <m:msub>
+              <m:mi>M</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mi>T</m:mi>
+            <m:mi>A</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2259422">where <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>=</m:mo><m:mn>3</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:mo>=</m:mo><m:mn>5</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:mi>T</m:mi><m:msub><m:mi>M</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math> = the number of multiplies for
+the length-3 module and hence the expansion factor. As mentioned
+earlier there is an optimum ordering to minimize additions. The
+ordering used to calculate <link target-id="uid27"/> is the ordering used in
+<link target-id="bid5"/>, <link target-id="bid6"/> which is optimal in most cases and close to optimal
+in the others.</para>
+      <table id="uid27" summary="This is a long list of 50 data rows with two header rows. The second header row contains sub-categories to compliment the first header row, creating 6 total columns, although there are only three unique entries in the first row.">
+<tgroup cols="6"><tbody>
+            <row>
+              <entry>Length</entry>
+              <entry>PFA</entry>
+              <entry>PFA</entry>
+              <entry>WFTA</entry>
+              <entry>WFTA</entry>
+              <entry>WFTA</entry>
+            </row>
+            <row>
+              <entry>N</entry>
+              <entry>Mults</entry>
+              <entry>Adds</entry>
+              <entry>Mults</entry>
+              <entry>RMults</entry>
+              <entry>Adds</entry>
+            </row>
+            <row>
+              <entry>10</entry>
+              <entry>20</entry>
+              <entry>88</entry>
+              <entry>24</entry>
+              <entry>20</entry>
+              <entry>88</entry>
+            </row>
+            <row>
+              <entry>12</entry>
+              <entry>16</entry>
+              <entry>96</entry>
+              <entry>24</entry>
+              <entry>16</entry>
+              <entry>96</entry>
+            </row>
+            <row>
+              <entry>14</entry>
+              <entry>32</entry>
+              <entry>172</entry>
+              <entry>36</entry>
+              <entry>32</entry>
+              <entry>172</entry>
+            </row>
+            <row>
+              <entry>15</entry>
+              <entry>50</entry>
+              <entry>162</entry>
+              <entry>36</entry>
+              <entry>34</entry>
+              <entry>162</entry>
+            </row>
+            <row>
+              <entry>18</entry>
+              <entry>40</entry>
+              <entry>204</entry>
+              <entry>44</entry>
+              <entry>40</entry>
+              <entry>208</entry>
+            </row>
+            <row>
+              <entry>20</entry>
+              <entry>40</entry>
+              <entry>216</entry>
+              <entry>48</entry>
+              <entry>40</entry>
+              <entry>216</entry>
+            </row>
+            <row>
+              <entry>21</entry>
+              <entry>76</entry>
+              <entry>300</entry>
+              <entry>54</entry>
+              <entry>52</entry>
+              <entry>300</entry>
+            </row>
+            <row>
+              <entry>24</entry>
+              <entry>44</entry>
+              <entry>252</entry>
+              <entry>48</entry>
+              <entry>36</entry>
+              <entry>252</entry>
+            </row>
+            <row>
+              <entry>28</entry>
+              <entry>64</entry>
+              <entry>400</entry>
+              <entry>72</entry>
+              <entry>64</entry>
+              <entry>400</entry>
+            </row>
+            <row>
+              <entry>30</entry>
+              <entry>100</entry>
+              <entry>384</entry>
+              <entry>72</entry>
+              <entry>68</entry>
+              <entry>384</entry>
+            </row>
+            <row>
+              <entry>35</entry>
+              <entry>150</entry>
+              <entry>598</entry>
+              <entry>108</entry>
+              <entry>106</entry>
+              <entry>666</entry>
+            </row>
+            <row>
+              <entry>36</entry>
+              <entry>80</entry>
+              <entry>480</entry>
+              <entry>88</entry>
+              <entry>80</entry>
+              <entry>488</entry>
+            </row>
+            <row>
+              <entry>40</entry>
+              <entry>100</entry>
+              <entry>532</entry>
+              <entry>96</entry>
+              <entry>84</entry>
+              <entry>532</entry>
+            </row>
+            <row>
+              <entry>42</entry>
+              <entry>152</entry>
+              <entry>684</entry>
+              <entry>108</entry>
+              <entry>104</entry>
+              <entry>684</entry>
+            </row>
+            <row>
+              <entry>45</entry>
+              <entry>190</entry>
+              <entry>726</entry>
+              <entry>132</entry>
+              <entry>130</entry>
+              <entry>804</entry>
+            </row>
+            <row>
+              <entry>48</entry>
+              <entry>124</entry>
+              <entry>636</entry>
+              <entry>108</entry>
+              <entry>92</entry>
+              <entry>660</entry>
+            </row>
+            <row>
+              <entry>56</entry>
+              <entry>156</entry>
+              <entry>940</entry>
+              <entry>144</entry>
+              <entry>132</entry>
+              <entry>940</entry>
+            </row>
+            <row>
+              <entry>60</entry>
+              <entry>200</entry>
+              <entry>888</entry>
+              <entry>144</entry>
+              <entry>136</entry>
+              <entry>888</entry>
+            </row>
+            <row>
+              <entry>63</entry>
+              <entry>284</entry>
+              <entry>1236</entry>
+              <entry>198</entry>
+              <entry>196</entry>
+              <entry>1394</entry>
+            </row>
+            <row>
+              <entry>70</entry>
+              <entry>300</entry>
+              <entry>1336</entry>
+              <entry>216</entry>
+              <entry>212</entry>
+              <entry>1472</entry>
+            </row>
+            <row>
+              <entry>72</entry>
+              <entry>196</entry>
+              <entry>1140</entry>
+              <entry>176</entry>
+              <entry>164</entry>
+              <entry>1156</entry>
+            </row>
+            <row>
+              <entry>80</entry>
+              <entry>260</entry>
+              <entry>1284</entry>
+              <entry>216</entry>
+              <entry>200</entry>
+              <entry>1352</entry>
+            </row>
+            <row>
+              <entry>84</entry>
+              <entry>304</entry>
+              <entry>1536</entry>
+              <entry>216</entry>
+              <entry>208</entry>
+              <entry>1536</entry>
+            </row>
+            <row>
+              <entry>90</entry>
+              <entry>380</entry>
+              <entry>1632</entry>
+              <entry>264</entry>
+              <entry>260</entry>
+              <entry>1788</entry>
+            </row>
+            <row>
+              <entry>105</entry>
+              <entry>590</entry>
+              <entry>2214</entry>
+              <entry>324</entry>
+              <entry>322</entry>
+              <entry>2418</entry>
+            </row>
+            <row>
+              <entry>112</entry>
+              <entry>396</entry>
+              <entry>2188</entry>
+              <entry>324</entry>
+              <entry>308</entry>
+              <entry>2332</entry>
+            </row>
+            <row>
+              <entry>120</entry>
+              <entry>460</entry>
+              <entry>2076</entry>
+              <entry>288</entry>
+              <entry>276</entry>
+              <entry>2076</entry>
+            </row>
+            <row>
+              <entry>126</entry>
+              <entry>568</entry>
+              <entry>2724</entry>
+              <entry>396</entry>
+              <entry>392</entry>
+              <entry>3040</entry>
+            </row>
+            <row>
+              <entry>140</entry>
+              <entry>600</entry>
+              <entry>2952</entry>
+              <entry>432</entry>
+              <entry>424</entry>
+              <entry>3224</entry>
+            </row>
+            <row>
+              <entry>144</entry>
+              <entry>500</entry>
+              <entry>2676</entry>
+              <entry>396</entry>
+              <entry>380</entry>
+              <entry>2880</entry>
+            </row>
+            <row>
+              <entry>168</entry>
+              <entry>692</entry>
+              <entry>3492</entry>
+              <entry>432</entry>
+              <entry>420</entry>
+              <entry>3492</entry>
+            </row>
+            <row>
+              <entry>180</entry>
+              <entry>760</entry>
+              <entry>3624</entry>
+              <entry>528</entry>
+              <entry>520</entry>
+              <entry>3936</entry>
+            </row>
+            <row>
+              <entry>210</entry>
+              <entry>1180</entry>
+              <entry>4848</entry>
+              <entry>648</entry>
+              <entry>644</entry>
+              <entry>5256</entry>
+            </row>
+            <row>
+              <entry>240</entry>
+              <entry>1100</entry>
+              <entry>4812</entry>
+              <entry>648</entry>
+              <entry>632</entry>
+              <entry>5136</entry>
+            </row>
+            <row>
+              <entry>252</entry>
+              <entry>1136</entry>
+              <entry>5952</entry>
+              <entry>792</entry>
+              <entry>784</entry>
+              <entry>6584</entry>
+            </row>
+            <row>
+              <entry>280</entry>
+              <entry>1340</entry>
+              <entry>6604</entry>
+              <entry>864</entry>
+              <entry>852</entry>
+              <entry>7148</entry>
+            </row>
+            <row>
+              <entry>315</entry>
+              <entry>2050</entry>
+              <entry>8322</entry>
+              <entry>1188</entry>
+              <entry>1186</entry>
+              <entry>10336</entry>
+            </row>
+            <row>
+              <entry>336</entry>
+              <entry>1636</entry>
+              <entry>7908</entry>
+              <entry>972</entry>
+              <entry>956</entry>
+              <entry>8508</entry>
+            </row>
+            <row>
+              <entry>360</entry>
+              <entry>1700</entry>
+              <entry>8148</entry>
+              <entry>1056</entry>
+              <entry>1044</entry>
+              <entry>8772</entry>
+            </row>
+            <row>
+              <entry>420</entry>
+              <entry>2360</entry>
+              <entry>10536</entry>
+              <entry>1296</entry>
+              <entry>1288</entry>
+              <entry>11352</entry>
+            </row>
+            <row>
+              <entry>504</entry>
+              <entry>2524</entry>
+              <entry>13164</entry>
+              <entry>1584</entry>
+              <entry>1572</entry>
+              <entry>14428</entry>
+            </row>
+            <row>
+              <entry>560</entry>
+              <entry>3100</entry>
+              <entry>14748</entry>
+              <entry>1944</entry>
+              <entry>1928</entry>
+              <entry>17168</entry>
+            </row>
+            <row>
+              <entry>630</entry>
+              <entry>4100</entry>
+              <entry>17904</entry>
+              <entry>2376</entry>
+              <entry>2372</entry>
+              <entry>21932</entry>
+            </row>
+            <row>
+              <entry>720</entry>
+              <entry>3940</entry>
+              <entry>18276</entry>
+              <entry>2376</entry>
+              <entry>2360</entry>
+              <entry>21132</entry>
+            </row>
+            <row>
+              <entry>840</entry>
+              <entry>5140</entry>
+              <entry>23172</entry>
+              <entry>2592</entry>
+              <entry>2580</entry>
+              <entry>24804</entry>
+            </row>
+            <row>
+              <entry>1008</entry>
+              <entry>5804</entry>
+              <entry>29100</entry>
+              <entry>3564</entry>
+              <entry>3548</entry>
+              <entry>34416</entry>
+            </row>
+            <row>
+              <entry>1260</entry>
+              <entry>8200</entry>
+              <entry>38328</entry>
+              <entry>4752</entry>
+              <entry>4744</entry>
+              <entry>46384</entry>
+            </row>
+            <row>
+              <entry>1680</entry>
+              <entry>11540</entry>
+              <entry>50964</entry>
+              <entry>5832</entry>
+              <entry>5816</entry>
+              <entry>59064</entry>
+            </row>
+            <row>
+              <entry>2520</entry>
+              <entry>17660</entry>
+              <entry>82956</entry>
+              <entry>9504</entry>
+              <entry>9492</entry>
+              <entry>99068</entry>
+            </row>
+            <row>
+              <entry>5040</entry>
+              <entry>39100</entry>
+              <entry>179772</entry>
+              <entry>21384</entry>
+              <entry>21368</entry>
+              <entry>232668</entry>
+            </row>
+          </tbody>
+        
+</tgroup><caption>Number of Real Multiplications and Additions for Complex
+PFA and WFTA FFTs</caption>
+</table>
+      <para id="id2261441">from <link target-id="uid27"/> we see that compared to the PFA or any of the Cooley-Tukey FFT's, the
+WFTA has significantly fewer multiplications. For the shorter
+lengths, the WFTA and the PFA have approximately the same number of
+additions; however for longer lengths, the PFA has fewer and the
+Cooley-Tukey FFT's always have the fewest. If the total arithmetic,
+the number of multiplications plus the number of additions, is
+compared, the split-radix FFT, PFA and WFTA all have about the same
+count. Special versions of the PFA and WFTA have been developed for
+real data <link target-id="bid17"/>, <link target-id="bid18"/>.</para>
+      <para id="id2261469">The size of the Cooley-Tukey program is the smallest, the
+PFA next and the WFTA largest. The PFA requires the smallest number
+of stored constants, the Cooley-Tukey or split-radix FFT next, and
+the WFTA requires the largest number. For a DFT of approximately
+1000, the PFA stores 28 constants, the FFT 2048 and the WFTA 3564.
+Both the FFT and PFA can be calculated in-place and the WFTA cannot.
+The PFA can be calculated in-order without an unscrambler. The
+radix-2 FFT can also, but it requires additional indexing overhead
+<link target-id="bid19"/>. The indexing and data transfer overhead is greatest for
+the WFTA because the separate preweave and postweave sections each
+require their indexing and pass through the complete data. The
+shorter modules in the PFA and WFTA and the butterflies in the radix
+2 and 4 FFT's are more efficient than the longer ones because
+intermediate calculations can be kept in cpu registers rather
+general memory <link target-id="bid20"/>. However, the shorter modules and
+radices require more passes through the data for a given approximate
+length. A proper comparison will require actual programs to be
+compiled and run on a particular machine. There are many open
+questions about the relationship of algorithms and hardware
+architecture.</para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid3">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Eschenbacher, P. W.</bib:author>
+        <bib:title>An In–Place, In–Order Prime Factor FFT Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:volume>29</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>806–817</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note>Reprinted in it DSP Software, by L.R. Morris, 1983</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Blahut, Richard E.</bib:author>
+        <bib:title>Fast Algorithms for Digital Signal Processing</bib:title>
+        <bib:publisher>Addison-Wesley</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Reading, Mass.</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Chu, Shuni and Burrus, C. S.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm using Distributed Arithmetic</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>30</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>217–227</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>DSP Committee, </bib:editor>
+        <bib:title>Digital Signal Processing II, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Good, I. J.</bib:author>
+        <bib:title>Interaction Algorithm and Practical Fourier Analysis</bib:title>
+        <bib:journal>J. Royal Statist. Soc., B</bib:journal>
+        <bib:year>1958</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number/>
+        <bib:pages>361–372</bib:pages>
+        <bib:month/>
+        <bib:note>Addendum: vol. 22, 1960, pp 372–375</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>Prime Factor FFT Algorithms for Real–Valued Series</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.7.1–4</bib:pages>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>Large DFT Modules: N = 11, 13, 17, 19, and 25</bib:title>
+        <bib:institution>Department of Electrical Engineering, Rice University, Houston, TX 77251–1892</bib:institution>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:type>Technical report</bib:type>
+        <bib:number>8105</bib:number>
+        <bib:address/>
+        <bib:month/>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>The Design of Optimal DFT Algorithms using Dynamic Programming</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>20–23</bib:pages>
+        <bib:address>Paris</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>An In-Order, In-Place Radix-2 FFT</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.2.1–4</bib:pages>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Howard W. and Burrus, C. S.</bib:author>
+        <bib:title>On the Structure of Efficient DFT Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>33</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>248–254</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Kolba, D. P. and Parks, T. W.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm Using High Speed Convolution</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1977</bib:year>
+<!--optional fields-->
+        <bib:volume>25</bib:volume>
+        <bib:number/>
+        <bib:pages>281–294</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note>also in </bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Li, Z. and Sorensen, H. V. and Burrus, C. S.</bib:author>
+        <bib:title>FFT and Convolution Algorithms for DSP Microprocessors</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>284–292</bib:pages>
+        <bib:address>Tokyo, Japan</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Morris, L. R.</bib:author>
+        <bib:title>Digital Signal Processing Software</bib:title>
+        <bib:publisher>DSPSW, Inc.</bib:publisher>
+        <bib:year>1982, 1983</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Toronto, Canada</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:book>
+<!--required fields-->
+        <bib:author>McClellan, J. H. and Rader, C. M.</bib:author>
+        <bib:title>Number Theory in Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Nussbaumer, H. J.</bib:author>
+        <bib:title>Fast Fourier Transform and Convolution Algorithms</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1981, 1982</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Heidelberg, Germany</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rothweiler, J.H.</bib:author>
+        <bib:title>Implementation of the In-Order Prime Factor FFT Algorithm</bib:title>
+        <bib:journal>IEEE TRANS. ON ASSP</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>30</bib:volume>
+        <bib:number/>
+        <bib:pages>105-107</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>Rabiner, L. R. and Rader, C. M.</bib:editor>
+        <bib:title>Digital Signal Processing, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1972</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>Real Valued Fast Fourier Transform Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>849–863</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Proc. National Academy of Sciences, USA</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>73</bib:volume>
+        <bib:number/>
+        <bib:pages>1006–1006</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Mathematics of Computation</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number/>
+        <bib:pages>175–199</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

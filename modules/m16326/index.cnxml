@@ -1,0 +1,2830 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Multidimensional Index Mapping</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+  <md:content-id>m16326</md:content-id>
+  <md:title>Multidimensional Index Mapping</md:title>
+  <md:abstract>A change of index variable or an index mapping is used to uncouple the calculations of the discrete Fourier transform (DFT).  This can result is a significant reduction in the required arithmetic and the resulting algorithm is called the fast Fourier transform (FFT).</md:abstract>
+  <md:uuid>3c48e4b5-0786-4d1f-bd30-a0cd860be3ab</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">A powerful approach to the development of efficient
+algorithms is to break a large problem into multiple small ones.
+One method for doing this with both the DFT and convolution uses a
+linear change of index variables to map the original one-dimensional problem into a multi-dimensional problem. This
+approach provides a unified derivation of the Cooley-Tukey FFT, the
+prime factor algorithm (PFA) FFT, and the Winograd Fourier transform
+algorithm (WFTA) FFT. It can also be applied directly to convolution
+to break it down into multiple short convolutions that can be executed 
+faster than a direct implementation.  It is often easy to translate an
+algorithm using index mapping into an efficient program.</para>
+    <para id="id2255551">The basic definition of the discrete Fourier transform (DFT) is</para>
+    <equation id="uid1"><m:math mode="display">
+        <m:mrow>
+          <m:mi>C</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>k</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:munderover>
+<m:mrow>
+            <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:mi>x</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mi>N</m:mi>
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mi>k</m:mi>
+            </m:mrow>
+          </m:msubsup>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2255639">where <m:math><m:mi>n</m:mi></m:math>, <m:math><m:mi>k</m:mi></m:math>, and <m:math><m:mi>N</m:mi></m:math> are integers, <m:math><m:mrow><m:mi>j</m:mi><m:mo>=</m:mo><m:msqrt><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msqrt></m:mrow></m:math>, the basis functions are the <m:math><m:mi>N</m:mi></m:math> roots of unity, </para>
+    <equation id="uid2">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mi>W</m:mi>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msup>
+            <m:mi>e</m:mi>
+            <m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>j</m:mi>
+              <m:mn>2</m:mn>
+              <m:mi>π</m:mi>
+              <m:mo>/</m:mo>
+              <m:mi>N</m:mi>
+            </m:mrow>
+          </m:msup>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2255733">and <m:math><m:mrow><m:mi>k</m:mi><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>.</para>
+    <para id="id2255773">If the <m:math><m:mi>N</m:mi></m:math> values of the transform are calculated from the <m:math><m:mi>N</m:mi></m:math> values of
+the data, <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>, it is easily seen that <m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> complex multiplications and
+approximately that same number of complex additions are required. One
+method for reducing this required arithmetic is to use an index
+mapping (a change of variables) to change the one-dimensional DFT
+into a two- or higher dimensional DFT. This is one of the ideas
+behind the very efficient Cooley-Tukey <link target-id="bid0"/> and Winograd
+<link target-id="bid1"/> algorithms. The purpose of index mapping is to
+change a large problem into several easier ones <link target-id="bid2"/>, <link target-id="bid3"/>. This
+is sometimes called the “divide and conquer" approach
+<link target-id="bid4"/> but a more accurate description would be “organize
+and share" which explains the process of redundancy removal or reduction.</para>
+    <section id="uid3">
+      <title>The Index Map</title>
+      <para id="id2255873">For a length-N sequence, the time index takes on the values</para>
+      <equation id="uid4">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mo>=</m:mo>
+            <m:mn>0</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>2</m:mn>
+            <m:mo>,</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>,</m:mo>
+            <m:mi>N</m:mi>
+            <m:mo>-</m:mo>
+            <m:mn>1</m:mn>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2255921">When the length of the DFT is not prime, <m:math><m:mi>N</m:mi></m:math> can be factored as <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> and two new independent variables can be defined over the
+ranges</para>
+      <equation id="uid5">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>n</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:mn>0</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>2</m:mn>
+            <m:mo>,</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>-</m:mo>
+            <m:mn>1</m:mn>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="uid6">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>n</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:mn>0</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>,</m:mo>
+            <m:mn>2</m:mn>
+            <m:mo>,</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>.</m:mo>
+            <m:mo>,</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>-</m:mo>
+            <m:mn>1</m:mn>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256070">A linear change of variables is defined which maps <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> and
+<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> to <m:math><m:mi>n</m:mi></m:math> and is expressed by</para>
+      <equation id="uid7">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>+</m:mo>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mi>N</m:mi>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256177">where <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> are integers and the notation <m:math><m:msub><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mi>N</m:mi></m:msub></m:math> denotes the integer
+residue of <m:math><m:mi>x</m:mi></m:math> modulo <m:math><m:mi>N</m:mi></m:math><link target-id="bid5"/>. This map defines a relation between all possible
+combinations of <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> in <link target-id="uid5"/> and <link target-id="uid6"/> and the values
+for <m:math><m:mi>n</m:mi></m:math> in <link target-id="uid4"/>. The question as to whether all of the <m:math><m:mi>n</m:mi></m:math> in <link target-id="uid4"/> are
+represented, i.e., whether the map is one-to-one (unique), has been
+answered in <link target-id="bid2"/> showing that certain integer <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> always exist
+such that the map in <link target-id="uid7"/> is one-to-one. Two cases must be
+considered.</para>
+      <section id="uid8">
+        <title>Case 1.</title>
+        <para id="id2256582"><m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> are relatively prime, i.e., the greatest common divisor <m:math><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math>.</para>
+        <para id="id2256646">The integer map of <link target-id="uid7"/> is one-to-one if and only if:</para>
+        <equation id="uid9">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mi>a</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and/or</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mi>b</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2256795">where <m:math><m:mi>a</m:mi></m:math> and <m:math><m:mi>b</m:mi></m:math> are integers.</para>
+      </section>
+      <section id="uid10">
+        <title>Case 2.</title>
+        <para id="id2256827"><m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> are not relatively prime, i.e., <m:math><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo><m:mo>&gt;</m:mo><m:mn>1</m:mn></m:mrow></m:math>.</para>
+        <para id="id2256891">The integer map of <link target-id="uid7"/> is one-to-one if and only if:</para>
+        <equation id="uid11">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mi>a</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>≠</m:mo>
+                <m:mi>b</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>a</m:mi>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257034">or</para>
+        <equation id="uid12">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>≠</m:mo>
+                <m:mi>a</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mi>b</m:mi>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>b</m:mi>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257175">Reference <link target-id="bid2"/> should be consulted for the details of
+these conditions and examples. Two classes of index maps are defined
+from these conditions.</para>
+      </section>
+      <section id="uid13">
+        <title>Type-One Index Map:</title>
+        <para id="id2257195">The map of <link target-id="uid7"/> is called a type-one map when integers <m:math><m:mi>a</m:mi></m:math> and <m:math><m:mi>b</m:mi></m:math> exist such that</para>
+        <equation id="uid14">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>K</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mi>a</m:mi>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:msub>
+                <m:mi>K</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mi>b</m:mi>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+      </section>
+      <section id="uid15">
+        <title>Type-Two Index Map:</title>
+        <para id="id2257294">The map of <link target-id="uid7"/> is called a type-two map when when integers <m:math><m:mi>a</m:mi></m:math> and <m:math><m:mi>b</m:mi></m:math> exist such that</para>
+        <equation id="uid16">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>K</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mi>a</m:mi>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>or</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:msub>
+                <m:mi>K</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mi>b</m:mi>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>,</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>but</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mtext>not</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mtext>both.</m:mtext>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257407">The type-one can be used <emphasis>only</emphasis> if the factors of <m:math><m:mi>N</m:mi></m:math> are relatively prime,
+but the type-two can be used whether they are relatively prime or
+not. Good <link target-id="bid6"/>, Thomas, and Winograd <link target-id="bid1"/> all used the
+type-one map in their DFT algorithms. Cooley and Tukey <link target-id="bid0"/>
+used the type-two in their algorithms, both for a fixed radix <m:math><m:mrow><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mi>R</m:mi><m:mi>M</m:mi></m:msup><m:mo>)</m:mo></m:mrow></m:math> and a mixed radix <link target-id="bid7"/>.</para>
+        <para id="id2257474">The frequency index is defined by a map similar to <link target-id="uid7"/> as</para>
+        <equation id="uid17">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>k</m:mi>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>3</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>k</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:mo>+</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>4</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>k</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257549">where the same conditions, <link target-id="uid9"/> and <link target-id="uid11"/>, are used for
+determining the uniqueness of this map in terms of the integers <m:math><m:msub><m:mi>K</m:mi><m:mn>3</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>K</m:mi><m:mn>4</m:mn></m:msub></m:math>.</para>
+        <para id="id2257590">Two-dimensional arrays for the input data and its DFT are
+defined using these index maps to give</para>
+        <equation id="uid18">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mover accent="true">
+                <m:mi>x</m:mi>
+                <m:mo>^</m:mo>
+              </m:mover>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>x</m:mi>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>n</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:mo>+</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>n</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <equation id="uid19">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mover accent="true">
+                <m:mi>X</m:mi>
+                <m:mo>^</m:mo>
+              </m:mover>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>X</m:mi>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>3</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>k</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:mo>+</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>4</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>k</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257783">In some of the following equations, the residue reduction
+notation will be omitted for clarity. These changes of variables
+applied to the definition of the DFT given in <link target-id="uid1"/> give</para>
+        <equation id="uid20"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>N</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:munderover>
+<m:mrow>         
+       <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>N</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mspace width="4pt"/>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>3</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>4</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>3</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>K</m:mi>
+                    <m:mn>4</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258063">where all of the exponents are evaluated modulo <m:math><m:mi>N</m:mi></m:math>.</para>
+        <para id="id2258077">The amount of arithmetic required to calculate <link target-id="uid20"/> is the
+same as in the direct calculation of <link target-id="uid1"/>. However, because
+of the special nature of the DFT, the integer constants <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> can be
+chosen in such a way that the calculations are “uncoupled" and
+the arithmetic is reduced. The requirements for this are</para>
+        <equation id="uid21">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>4</m:mn>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mtext>and/or</m:mtext>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:mspace width="4pt"/>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>K</m:mi>
+                      <m:mn>3</m:mn>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258213">When this condition and those for uniqueness in <link target-id="uid7"/> are
+applied, it is found that the <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> may <emphasis>always</emphasis> be chosen such that
+one of the terms in <link target-id="uid21"/> is zero. If the <m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math> are
+relatively prime, it is always possible to make <emphasis>both</emphasis> terms zero. If
+the <m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math> are not relatively prime, only one of the terms can be
+set to zero. When they are relatively prime, there is a choice, it
+is possible to either set one or both to zero. This in turn causes
+one or both of the center two <m:math><m:mi>W</m:mi></m:math> terms in <link target-id="uid20"/> to become
+unity.</para>
+        <para id="id2258299">An example of the Cooley-Tukey radix-4 FFT for a length-16
+DFT uses the type-two map with <m:math><m:mrow><m:msub><m:mi>K</m:mi><m:mn>1</m:mn></m:msub><m:mo>=</m:mo><m:mn>4</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:msub><m:mi>K</m:mi><m:mn>2</m:mn></m:msub><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:msub><m:mi>K</m:mi><m:mn>3</m:mn></m:msub><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:msub><m:mi>K</m:mi><m:mn>4</m:mn></m:msub><m:mo>=</m:mo><m:mn>4</m:mn></m:mrow></m:math> giving</para>
+        <equation id="uid22">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>4</m:mn>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <equation id="uid23">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>k</m:mi>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:mn>4</m:mn>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258454">The residue reduction in <link target-id="uid7"/> is not needed here since <m:math><m:mi>n</m:mi></m:math>
+does not exceed <m:math><m:mi>N</m:mi></m:math> as <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> take on their values. Since,
+in this example, the factors of <m:math><m:mi>N</m:mi></m:math> have a common factor, only
+one of the conditions in <link target-id="uid21"/> can hold and, therefore,
+<link target-id="uid20"/> becomes</para>
+        <equation id="uid24"><m:math mode="display">
+            <m:mrow>
+              <m:mover accent="true">
+                <m:mi>C</m:mi>
+                <m:mo>^</m:mo>
+              </m:mover>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>3</m:mn>
+              </m:munderover>
+              <m:munderover>
+<m:mrow>         
+       <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>3</m:mn>
+              </m:munderover>
+              <m:mspace width="4pt"/>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>4</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mrow>
+                  <m:mn>16</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>4</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258728">Note the definition of <m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math> in <link target-id="uid4"/> allows the simple form of
+<m:math><m:mrow><m:msubsup><m:mi>W</m:mi><m:mrow><m:mn>16</m:mn></m:mrow><m:mrow><m:msub><m:mi>K</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>K</m:mi><m:mn>3</m:mn></m:msub></m:mrow></m:msubsup><m:mo>=</m:mo><m:msub><m:mi>W</m:mi><m:mn>4</m:mn></m:msub></m:mrow></m:math></para>
+        <para id="id2258795">This has the form of a two-dimensional DFT with an extra
+term <m:math><m:msub><m:mi>W</m:mi><m:mn>16</m:mn></m:msub></m:math>, called a “twiddle factor". The inner
+sum over <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> represents four length-4 DFTs, the <m:math><m:msub><m:mi>W</m:mi><m:mn>16</m:mn></m:msub></m:math> term
+represents 16 complex multiplications, and the outer sum over
+<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> represents another four length-4 DFTs. This choice of the
+<m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> “uncouples" the calculations since the first sum over <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math>
+for <m:math><m:mrow><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math> calculates the DFT of the first row of the data array
+<m:math><m:mrow><m:mover accent="true"><m:mi>x</m:mi><m:mo>^</m:mo></m:mover><m:mrow><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, and those data values are never needed in the
+succeeding row calculations. The row calculations are independent,
+and examination of the outer sum shows that the column
+calculations are likewise independent. This is illustrated in <link target-id="uid25"/>.</para>
+        <figure id="uid25" orient="horizontal"><media id="id2658246" alt="Three squares with a 4x4 array of dots on each. The square in the back is labeled x(n1,n2) and has lines extending from the top four dots. The next square is labeled x(k1,n2)xTF and has lines extending from the left column of dots extending to the next square which is labeled X(k1,k2)"><image src="../../media/Fig1.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/Fig1.eps" mime-type="application/postscript" print-width="3in"/></media><caption>Uncoupling of the Row and Column Calculations (Rectangles are Data Arrays)</caption></figure>
+        <para id="id2258989">The left 4-by-4 array is the mapped input data, the center
+array has the rows transformed, and the right array is the DFT
+array. The row DFTs and the column DFTs are independent of each
+other. The twiddle factors (TF) which are the center <m:math><m:mi>W</m:mi></m:math> in
+<link target-id="uid24"/>, are the multiplications which take place on the center
+array of <link target-id="uid25"/>.</para>
+        <para id="id2259016">This uncoupling feature reduces the amount of arithmetic
+required and allows the results of each row DFT to be written
+back over the input data locations, since that input row will
+not be needed again. This is called “in-place" calculation
+and it results in a large memory requirement savings.</para>
+        <para id="id2259029">An example of the type-two map used when the factors of <m:math><m:mi>N</m:mi></m:math>
+are relatively prime is given for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mn>15</m:mn></m:mrow></m:math> as</para>
+        <equation id="uid26">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>5</m:mn>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <equation id="uid27">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>k</m:mi>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:mn>3</m:mn>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259128">The residue reduction is again not explicitly needed. Although the
+factors 3 and 5 are relatively prime, use of the type-two map
+sets only one of the terms in <link target-id="uid21"/> to zero. The DFT in
+<link target-id="uid20"/> becomes</para>
+        <equation id="uid28"><m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>4</m:mn>
+              </m:munderover>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>2</m:mn>
+              </m:munderover>
+              <m:mi>x</m:mi>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>3</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mrow>
+                  <m:mn>15</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>5</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259289">which has the same form as <link target-id="uid24"/>, including the existence of
+the twiddle factors (TF). Here the inner sum is five length-3
+DFTs, one for each value of <m:math><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub></m:math>. This is illustrated in <link target-id="uid2"/>
+where the rectangles are the 5 by 3 data arrays and the system is called a ``mixed radix" FFT.</para>
+        <figure id="uid29" orient="horizontal"><media id="id3228906" alt="Three rectangles with a 3x5 array of dots. The first rectangle is labeled x(n_1,n_2) with lines extending from the first row of dots to the next rectangle. This rectangle is labeled x(k_1,n_2). Lines extend from the left-most column and end at the third rectangle labeled X(k_1,k_2)."><image src="../../media/Fig2.png" mime-type="image/png" width="600"/><image for="pdf" src="../../media/Fig2.eps" mime-type="application/postscript" print-width="3in"/></media><caption>Uncoupling of the Row and Column Calculations (Rectangles are Data Arrays)</caption></figure>
+        <para id="id2259333">An alternate illustration is shown in <link target-id="uid30"/> where the
+rectangles are the short length 3 and 5 DFTs.</para>
+        <figure id="uid30" orient="horizontal"><media id="id3369744" alt="This image contains five rectangles that are laying horizontal and are stacked vertically. Each of the rectangles has three lines extending through themselves and then intersecting one of three vertical rectangles."><image src="../../media/file0018.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/file0018.eps" mime-type="application/postscript" print-width="3in"/></media><caption>Uncoupling of the Row and Column Calculations (Rectangles are Short DFTs)</caption></figure>
+        <para id="id2259356">The type-one map is illustrated next on the same length-15
+example. This time the situation of <link target-id="uid9"/> with the “and"
+condition is used in <link target-id="uid14"/> using an index map of</para>
+        <equation id="uid31">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>5</m:mn>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:mn>3</m:mn>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259410">and</para>
+        <equation id="uid32">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>k</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>10</m:mn>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:mn>6</m:mn>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259453">The residue reduction is now necessary. Since the factors of <m:math><m:mi>N</m:mi></m:math>
+are relatively prime and the type-one map is being used, both terms
+in <link target-id="uid21"/> are zero, and <link target-id="uid20"/> becomes</para>
+        <equation id="uid33"><m:math mode="display">
+            <m:mrow>
+              <m:mover accent="true">
+                <m:mi>X</m:mi>
+                <m:mo>^</m:mo>
+              </m:mover>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>4</m:mn>
+              </m:munderover>
+              <m:munderover>
+<m:mrow>         
+       <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mn>2</m:mn>
+              </m:munderover>
+              <m:mover accent="true">
+                <m:mi>x</m:mi>
+                <m:mo>^</m:mo>
+              </m:mover>
+              <m:mspace width="4pt"/>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>3</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mn>5</m:mn>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259604">which is similar to <link target-id="uid28"/>, except that now the type-one map
+gives a pure two-dimensional DFT calculation with no TFs, and the
+sums can be done in either order. Figures <link target-id="uid29"/> and <link target-id="uid30"/>
+also describe this case but now there are no Twiddle Factor
+multiplications in the center and the resulting system is called a ``prime factor algorithm" (PFA).</para>
+        <para id="id2259626">The purpose of index mapping is to improve the arithmetic
+efficiency. For example a direct calculation of a length-16 DFT
+requires 16^2 or 256 real multiplications (recall, one complex multiplication requires 4 real multiplications and 2 real additions) and an uncoupled version
+requires 144. A direct calculation of a length-15 DFT requires
+225 multiplications but with a type-two map only 135 and with a
+type-one map, 120. Recall one complex multiplication requires
+four real multiplications and two real additions.</para>
+        <para id="id2259636">Algorithms of practical interest use short DFT's that
+require fewer than <m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> multiplications. For example, length-4
+DFTs require no multiplications and, therefore, for the length-16
+DFT, only the TFs must be calculated. That calculation uses
+16 multiplications, many fewer than the 256 or 144 required for
+the direct or uncoupled calculation.</para>
+        <para id="id2259660">The concept of using an index map can also be applied to
+convolution to convert a length <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> one-dimensional
+cyclic convolution into a <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> by <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> two-dimensional cyclic
+convolution <link target-id="bid2"/>, <link target-id="bid11"/>. There is no savings of arithmetic
+from the mapping alone as there is with the DFT, but savings can be
+obtained by using special short algorithms along each dimension.
+This is discussed in <link document="m16338">Algorithms for Data with Restrictions</link>					.</para>
+      </section>
+    </section>
+    <section id="uid34">
+      <title>In-Place Calculation of the DFT and Scrambling</title>
+      <para id="id2259745">Because use of both the type-one and two index maps
+uncouples the calculations of the rows and columns of the data
+array, the results of each short length <m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math> DFT can be written
+back over the data as it will not be needed again after that
+particular row or column is transformed. This is easily seen from
+Figures <link target-id="uid25"/>, <link target-id="uid29"/>, and <link target-id="uid30"/> where the DFT of the
+first row of <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo></m:mrow></m:math> can be put
+back over the data rather written into a new array. After all the
+calculations are finished, the total DFT is in the array of the
+original data. This gives a significant memory savings over using a
+separate array for the output.</para>
+      <para id="id2259819">Unfortunately, the use of in-place calculations results in
+the order of the DFT values being permuted or scrambled. This is because
+the data is indexed according to the input map <link target-id="uid7"/> and the
+results are put into the same locations rather than the locations
+dictated by the output map <link target-id="uid17"/>. For example with a length-8
+radix-2 FFT, the input index map is</para>
+      <equation id="uid35">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mo>=</m:mo>
+            <m:mn>4</m:mn>
+            <m:msub>
+              <m:mi>n</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>+</m:mo>
+            <m:mn>2</m:mn>
+            <m:msub>
+              <m:mi>n</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>n</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2259884">which to satisfy <link target-id="uid21"/> requires an output map of</para>
+      <equation id="uid36">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>k</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>k</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>+</m:mo>
+            <m:mn>2</m:mn>
+            <m:msub>
+              <m:mi>k</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mo>+</m:mo>
+            <m:mn>4</m:mn>
+            <m:msub>
+              <m:mi>k</m:mi>
+              <m:mn>3</m:mn>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2259943">The in-place calculations will place the DFT results in the
+locations of the input map and these should be reordered or
+unscrambled into the locations given by the output map.
+Examination of these two maps shows the scrambled output to be in
+a “bit reversed" order.</para>
+      <para id="id2259955">For certain applications, this scrambled output order is not
+important, but for many applications, the order must be unscrambled
+before the DFT can be considered complete. Because the radix of the
+radix-2 FFT is the same as the base of the binary number
+representation, the correct address for any term is found by
+reversing the binary bits of the address. The part of most FFT programs that does
+this reordering is called a bit-reversed counter. Examples of
+various unscramblers are found in <link target-id="bid9"/>, <link target-id="bid12"/> and in the appendices.</para>
+      <para id="id2259977">The development here uses the input map and the resulting
+algorithm is called “decimation-in-frequency". If the output rather
+than the input map is used to derive the FFT algorithm so the
+correct output order is obtained, the input order must be scrambled
+so that its values are in locations specified by the output map
+rather than the input map. This algorithm is called
+“decimation-in-time". The scrambling is the same bit-reverse
+counting as before, but it precedes the FFT algorithm in this case.
+The same process of a post-unscrambler or pre-scrambler occurs for
+the in-place calculations with the type-one maps. Details can be
+found in <link target-id="bid12"/>, <link target-id="bid13"/>. It is possible to do the unscrambling
+while calculating the FFT and to avoid a separate unscrambler. This
+is done for the Cooley-Tukey FFT in <link target-id="bid14"/> and for the PFA in
+<link target-id="bid12"/>, <link target-id="bid13"/>, <link target-id="bid15"/>.</para>
+      <para id="id2260028">If a radix-2 FFT is used, the unscrambler is a bit-reversed
+counter. If a radix-4 FFT is used, the unscrambler is a base-4
+reversed counter, and similarly for radix-8 and others. However,
+if for the radix-4 FFT, the short length-4 DFTs (butterflies) have their
+outputs in bit-revered order, the output of the total radix-4 FFT
+will be in bit-reversed order, not base-4 reversed order. This
+means any radix-<m:math><m:msup><m:mn>2</m:mn><m:mi>n</m:mi></m:msup></m:math> FFT can use the same radix-2 bit-reversed
+counter as an unscrambler if the proper butterflies are used. </para>
+    </section>
+    <section id="uid37">
+      <title>Efficiencies Resulting from Index Mapping with the
+DFT</title>
+      <para id="id2260063">In this section the reductions in arithmetic in the DFT that
+result from the index mapping alone will be examined. In
+practical algorithms several methods are always combined, but it
+is helpful in understanding the effects of a particular method to
+study it alone.</para>
+      <para id="id2260071">The most general form of an uncoupled two-dimensional DFT is
+given by</para>
+      <equation id="uid38"><m:math mode="display">
+          <m:mrow>
+            <m:mi>X</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mn>1</m:mn>
+              <m:mo>,</m:mo>
+              <m:mi>k</m:mi>
+              <m:mn>2</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:msub>
+                  <m:mi>N</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:munderover>
+<m:mrow>         
+       <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>N</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:msub>
+                <m:mi>f</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>,</m:mo>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>f</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>,</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>,</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2260288">where the inner sum calculates <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> length-<m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> DFT's and, if for
+a type-two map, the effects of the TFs. If the number of arithmetic
+operations for a length-N DFT is denoted by <m:math><m:mrow><m:mi>F</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math>, the number of
+operations for this inner sum is <m:math><m:mrow><m:mi>F</m:mi><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math>. The outer sum
+which gives <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> length-<m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> DFT's requires <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+operations. The total number of arithmetic operations is then</para>
+      <equation id="id2260438">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:mi>F</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mi>F</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2260499">The first question to be considered is for a fixed length <m:math><m:mi>N</m:mi></m:math>, what
+is the optimal relation of <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> in the sense of
+minimizing the required amount of arithmetic. To answer this
+question, <m:math><m:mrow><m:mi>N</m:mi><m:mn>1</m:mn></m:mrow></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> are temporarily assumed to be real
+variables rather than integers. If the short length-<m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math> DFT's in
+<link target-id="uid38"/> and any TF multiplications are assumed to require
+<m:math><m:msubsup><m:mi>N</m:mi><m:mi>i</m:mi><m:mn>2</m:mn></m:msubsup></m:math> operations, i.e. <m:math><m:mrow><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msubsup><m:mi>N</m:mi><m:mi>i</m:mi><m:mn>2</m:mn></m:msubsup></m:mrow></m:math>, <link target-id="uid37">"Efficiencies Resulting from Index Mapping with the
+DFT"</link> becomes</para>
+      <equation id="uid39">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+            <m:msubsup>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+              <m:mn>2</m:mn>
+            </m:msubsup>
+            <m:mo>+</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:msubsup>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+              <m:mn>2</m:mn>
+            </m:msubsup>
+            <m:mo>=</m:mo>
+            <m:mi>N</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:mi>N</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:mi>N</m:mi>
+              <m:msubsup>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msubsup>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2260766">To find the minimum of <m:math><m:mi>F</m:mi></m:math> over <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math>, the derivative of <m:math><m:mi>F</m:mi></m:math> with
+respect to <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> is set to zero (temporarily assuming the variables
+to be continuous) and the result requires <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math>.</para>
+      <equation id="uid40">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>d</m:mi>
+            <m:mi>F</m:mi>
+            <m:mo>/</m:mo>
+            <m:mi>d</m:mi>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:mn>0</m:mn>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mo>=</m:mo>
+            <m:mo>&gt;</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>1</m:mn>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mn>2</m:mn>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2260915">This result is also easily seen from the symmetry of <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math>
+in <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math>. If a more general model of the arithmetic
+complexity of the short DFT's is used, the same result is obtained,
+but a closer examination must be made to assure that <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub><m:mo>=</m:mo><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> is
+a global minimum.</para>
+      <para id="id2261004">If only the effects of the index mapping are to be
+considered, then the <m:math><m:mrow><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:mrow></m:math> model is used and <link target-id="uid40"/>
+states that the two factors should be equal. If there are M factors,
+a similar reasoning shows that all <m:math><m:mi>M</m:mi></m:math> factors should be equal. For
+the sequence of length</para>
+      <equation id="uid41">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>N</m:mi>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>R</m:mi>
+              <m:mi>M</m:mi>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261076">there are now <m:math><m:mi>M</m:mi></m:math> length-R DFT's and, since the factors are all
+equal, the index map must be type two. This means there must be
+twiddle factors.</para>
+      <para id="id2261093">In order to simplify the analysis, only the number of
+multiplications will be considered. If the number of multiplications
+for a length-R DFT is <m:math><m:mrow><m:mi>F</m:mi><m:mo>(</m:mo><m:mi>R</m:mi><m:mo>)</m:mo></m:mrow></m:math>, then the formula for operation counts
+in <link target-id="uid39"/> generalizes to</para>
+      <equation id="uid42"><m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:mi>N</m:mi>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>i</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+              <m:mi>M</m:mi>
+            </m:munderover>
+            <m:mi>F</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mi>i</m:mi>
+              </m:msub>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>/</m:mo>
+            <m:msub>
+              <m:mi>N</m:mi>
+              <m:mi>i</m:mi>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:mi>N</m:mi>
+            <m:mi>M</m:mi>
+            <m:mi>F</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>R</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>/</m:mo>
+            <m:mi>R</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261200">for <m:math><m:mrow><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub><m:mo>=</m:mo><m:mi>R</m:mi></m:mrow></m:math></para>
+      <equation id="uid43">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:mi>N</m:mi>
+            <m:mo form="prefix">ln</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo>(</m:mo>
+            <m:mi>N</m:mi>
+            <m:mo>)</m:mo>
+            <m:mi>F</m:mi>
+            <m:mo>(</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo>)</m:mo>
+            <m:mo>/</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo>=</m:mo>
+            <m:mo>(</m:mo>
+            <m:mi>N</m:mi>
+            <m:mo form="prefix">ln</m:mo>
+            <m:mi>N</m:mi>
+            <m:mo>)</m:mo>
+            <m:mo>(</m:mo>
+            <m:mi>F</m:mi>
+            <m:mo>(</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo>)</m:mo>
+            <m:mo>/</m:mo>
+            <m:mo>(</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo form="prefix">ln</m:mo>
+            <m:mi>R</m:mi>
+            <m:mo>)</m:mo>
+            <m:mo>)</m:mo>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261312">This is a very important formula which was derived by Cooley and
+Tukey in their famous paper <link target-id="bid0"/> on the FFT. It states that
+for a given R which is called the radix, the number of
+multiplications (and additions) is proportional to <m:math><m:mrow><m:mi>N</m:mi><m:mo form="prefix">ln</m:mo><m:mi>N</m:mi></m:mrow></m:math>. It
+also shows the relation to the value of the radix, <m:math><m:mi>R</m:mi></m:math>.</para>
+      <para id="id2261352">In order to get some idea of the “best" radix, the number of
+multiplications to compute a length-R DFT is assumed to be <m:math><m:mrow><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:mi>R</m:mi><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msup><m:mi>R</m:mi><m:mi>x</m:mi></m:msup></m:mrow></m:math>. If this is used with <link target-id="uid43"/>, the optimal R can be found.</para>
+      <equation id="uid44">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>d</m:mi>
+            <m:mi>F</m:mi>
+            <m:mo>/</m:mo>
+            <m:mi>d</m:mi>
+            <m:mi>R</m:mi>
+            <m:mo>=</m:mo>
+            <m:mn>0</m:mn>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mo>=</m:mo>
+            <m:mo>&gt;</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:mi>R</m:mi>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>e</m:mi>
+              <m:mrow>
+                <m:mn>1</m:mn>
+                <m:mo>/</m:mo>
+                <m:mo>(</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261467">For <m:math><m:mrow><m:mi>x</m:mi><m:mo>=</m:mo><m:mn>2</m:mn></m:mrow></m:math> this gives <m:math><m:mrow><m:mi>R</m:mi><m:mo>=</m:mo><m:mi>e</m:mi></m:mrow></m:math>, with the closest integer being
+three.</para>
+      <para id="id2261499">The result of this analysis states that if no other
+arithmetic saving methods other than index mapping are used, and if
+the length-R DFT's plus TFs require <m:math><m:mrow><m:mi>F</m:mi><m:mo>=</m:mo><m:msup><m:mi>R</m:mi><m:mn>2</m:mn></m:msup></m:mrow></m:math> multiplications, the
+optimal algorithm requires</para>
+      <equation id="uid45">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>F</m:mi>
+            <m:mo>=</m:mo>
+            <m:mn>3</m:mn>
+            <m:mi>N</m:mi>
+            <m:msub>
+              <m:mo form="prefix">log</m:mo>
+              <m:mn>3</m:mn>
+            </m:msub>
+            <m:mi>N</m:mi>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261559">multiplications for a length <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mn>3</m:mn><m:mi>M</m:mi></m:msup></m:mrow></m:math> DFT. Compare this with <m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math>
+for a direct calculation and the improvement is obvious.</para>
+      <para id="id2261601">While this is an interesting result from the analysis of the
+effects of index mapping alone, in practice, index mapping is almost
+always used in conjunction with special algorithms for the short
+length-<m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math> DFT's in <link target-id="uid20"/>. For example, if <m:math><m:mrow><m:mi>R</m:mi><m:mo>=</m:mo><m:mn>2</m:mn></m:mrow></m:math> or 4,
+there are no multiplications required for the short DFT's. Only the
+TFs require multiplications. Winograd (see <link document="m16333">Winorad's Short DFT Algorithms</link>) has
+derived some algorithms for short DFT's that require <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+multiplications. This means that <m:math><m:mrow><m:mi>F</m:mi><m:mrow><m:mo>(</m:mo><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:mi>K</m:mi><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math> and the
+operation count <m:math><m:mi>F</m:mi></m:math> in <link target-id="uid37">"Efficiencies Resulting from Index Mapping with the
+DFT"</link> is independent of <m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math>.
+Therefore, the derivative of <m:math><m:mi>F</m:mi></m:math> is zero for all <m:math><m:msub><m:mi>N</m:mi><m:mi>i</m:mi></m:msub></m:math>. Obviously,
+these particular cases must be examined.</para>
+    </section>
+    <section id="uid46">
+      <title>The FFT as a Recursive Evaluation of the DFT</title>
+      <para id="id2261760">It is possible to formulate the DFT so a length-N DFT can be calculated in terms
+of two length-(N/2) DFTs. And, if <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:mrow></m:math>, each of those length-(N/2) DFTs can
+be found in terms of length-(N/4) DFTs. This allows the DFT to be calculated by
+a recursive algorithm with <m:math><m:mi>M</m:mi></m:math> recursions, giving the familiar order <m:math><m:mrow><m:mi>N</m:mi><m:mo form="prefix">log</m:mo><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+arithmetic complexity.</para>
+      <para id="id2261818">Calculate the even indexed DFT values from <link target-id="uid1"/> by:</para>
+      <equation id="uid47"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mrow>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:mo>=</m:mo>
+            <m:mspace width="4pt"/>
+            <m:munderover>
+<m:mrow>         
+     <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="uid48"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mrow>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:mo>+</m:mo>
+            <m:mspace width="4pt"/>
+            <m:munderover>
+<m:mrow>         
+     <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="uid49"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mo>+</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2262228">and a similar argument gives the odd indexed values as:</para>
+      <equation id="uid50"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>+</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mo>-</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mi>n</m:mi>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2262366">Together, these are recursive DFT formulas expressing the length-N DFT of <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+in terms of length-N/2 DFTs:</para>
+      <equation id="id2262388">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mo>+</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="id2262466">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>2</m:mn>
+              <m:mi>k</m:mi>
+              <m:mo>+</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:mi>x</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mspace width="4pt"/>
+                <m:mo>-</m:mo>
+                <m:mspace width="4pt"/>
+                <m:mi>x</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>+</m:mo>
+                  <m:mi>N</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mi>n</m:mi>
+              </m:msubsup>
+              <m:mo>}</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2262565">This is a “decimation-in-frequency" (DIF) version since it gives
+samples of the frequency domain representation in terms of blocks
+of the time domain signal.</para>
+      <para id="id2262574">A recursive Matlab program which implements this is given by:</para>
+      <code id="uid51" display="block" class="listing">function c = dftr2(x)
+% Recursive Decimation-in-Frequency FFT algorithm, csb 8/21/07
+L = length(x);
+if L &gt; 1
+     L2 = L/2;
+     TF = exp(-j*2*pi/L).^[0:L2-1];
+     c1 = dftr2( x(1:L2) + x(L2+1:L));
+     c2 = dftr2((x(1:L2) - x(L2+1:L)).*TF);
+     cc = [c1';c2'];
+     c = cc(:);
+else
+     c  = x;
+end
+<caption>DIF Recursive FFT for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:mrow></m:math></caption></code>
+      <para id="id2262741">A DIT version can be derived in the form:</para>
+      <equation id="id2262744">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:mo>+</m:mo>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mi>k</m:mi>
+            </m:msubsup>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="id2262851">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>/</m:mo>
+              <m:mn>2</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:mo>-</m:mo>
+            <m:mspace width="4pt"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mi>k</m:mi>
+            </m:msubsup>
+            <m:msub>
+              <m:mtext>DFT</m:mtext>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>}</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2262966">which gives blocks of the frequency domain from samples of the signal.</para>
+      <para id="id2262972">A recursive Matlab program which implements this is given by:</para>
+      <code id="uid52" display="block" class="listing">function c = dftr(x)
+% Recursive Decimation-in-Time FFT algorithm, csb
+L = length(x);
+if L &gt; 1
+     L2 = L/2;
+     ce = dftr(x(1:2:L-1));
+     co = dftr(x(2:2:L));
+     TF = exp(-j*2*pi/L).^[0:L2-1];
+     c1 = TF.*co;
+     c  = [(ce+c1), (ce-c1)];
+else
+     c  = x;
+end
+<caption>DIT Recursive FFT for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:mrow></m:math></caption></code>
+      <para id="id2263142">Similar recursive expressions can be developed for other radices and and algorithms.
+Most recursive programs do not execute as efficiently as looped or straight code,
+but some can be very efficient, e.g. parts of the FFTW.</para>
+      <para id="id2263149">Note a length-<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math> sequence will require <m:math><m:mi>M</m:mi></m:math> recursions, each of which will require
+<m:math><m:mrow><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> multiplications. This give the <m:math><m:mrow><m:mi>N</m:mi><m:mo form="prefix">log</m:mo><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math> formula that the other approaches
+also derive.</para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid11">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Agarwal, R. C. and Cooley, J. W.</bib:author>
+        <bib:title>New Algorithms for Digital Convolution</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1977</bib:year>
+<!--optional fields-->
+        <bib:volume>25</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>392–410</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Eschenbacher, P. W.</bib:author>
+        <bib:title>An In–Place, In–Order Prime Factor FFT Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:volume>29</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>806–817</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note>Reprinted in it DSP Software, by L.R. Morris, 1983</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Blahut, Richard E.</bib:author>
+        <bib:title>Fast Algorithms for Digital Signal Processing</bib:title>
+        <bib:publisher>Addison-Wesley</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Reading, Mass.</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>Index Mapping for Multidimensional Formulation of the DFT and Convolution</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1977</bib:year>
+<!--optional fields-->
+        <bib:volume>ASSP-25</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>239–242</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W. and Tukey, J. W.</bib:author>
+        <bib:title>An Algorithm for the Machine Calculation of Complex Fourier Series</bib:title>
+        <bib:journal>Math. Computat.</bib:journal>
+        <bib:year>1965</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>297–301</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>Elliott, Douglas F.</bib:editor>
+        <bib:title>Handbook of Digital Signal Processing</bib:title>
+        <bib:publisher>Academic Press</bib:publisher>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note>Chapter 7 on FFT by Elliott</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Good, I. J.</bib:author>
+        <bib:title>Interaction Algorithm and Practical Fourier Analysis</bib:title>
+        <bib:journal>J. Royal Statist. Soc., B</bib:journal>
+        <bib:year>1958</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number/>
+        <bib:pages>361–372</bib:pages>
+        <bib:month/>
+        <bib:note>Addendum: vol. 22, 1960, pp 372–375</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Gold, B. and Rader, C. M.</bib:author>
+        <bib:title>Digital Processing of Signals</bib:title>
+        <bib:publisher>McGraw-Hill</bib:publisher>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid115">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Hegland, Markus and Wheeler, W. W.</bib:author>
+        <bib:title>Linear Bijections and the Fast Fourier Transform</bib:title>
+        <bib:journal>Applicable Algebra in Engineering, Communication and Computing</bib:journal>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume>8</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>143–163</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>An In-Order, In-Place Radix-2 FFT</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.2.1–4</bib:pages>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid116">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Lun, D. P-K. and Siu, W-C.</bib:author>
+        <bib:title>
+           An Analysis for the Realization of an In-Place and In-Order Prime Factor Algorithm
+        </bib:title>
+        <bib:journal>
+           IEEE Transactions on Signal Processing
+        </bib:journal>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number>7</bib:number>
+        <bib:pages>2362–2370</bib:pages>
+        <bib:month>July</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:book>
+<!--required fields-->
+        <bib:author>McClellan, J. H. and Rader, C. M.</bib:author>
+        <bib:title>Number Theory in Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note>Earlier editions in 1975 and 1989</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Parks, T. W. and Burrus, C. S.</bib:author>
+        <bib:title>Digital Filter Design</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rothweiler, J.H.</bib:author>
+        <bib:title>Implementation of the In-Order Prime Factor FFT Algorithm</bib:title>
+        <bib:journal>IEEE TRANS. ON ASSP</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>30</bib:volume>
+        <bib:number/>
+        <bib:pages>105-107</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>Rabiner, L. R. and Rader, C. M.</bib:editor>
+        <bib:title>Digital Signal Processing, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1972</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid117">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Schatzman, James C.</bib:author>
+        <bib:title>Index Mapping for the Fast Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:volume>44</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>717–719</bib:pages>
+        <bib:month>March</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Proc. National Academy of Sciences, USA</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>73</bib:volume>
+        <bib:number/>
+        <bib:pages>1006–1006</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

@@ -1,0 +1,4066 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>DFT and FFT: An Algebraic View</title>
+  <metadata>
+  <md:content-id>m16331</md:content-id><md:title>DFT and FFT: An Algebraic View</md:title>
+  <md:abstract/>
+  <md:uuid>e0025f09-f985-41a4-9c6e-44149065abc3</md:uuid>
+</metadata>
+
+<content>
+    <para id="element-874">by Markus Pueschel, Carnegie Mellon University</para><para id="id2255547">In infinite, or non-periodic, discrete-time signal processing, there
+is a strong connection between the <m:math><m:mi>z</m:mi></m:math>-transform, Laurent series,
+convolution, and the discrete-time Fourier transform (DTFT)
+<link target-id="bid0"/>. As one may expect, a similar connection exists
+for the DFT but bears surprises. Namely, it turns out that the proper
+framework for the DFT requires modulo operations of polynomials, which
+means working with so-called polynomial algebras
+<link target-id="bid1"/>. Associated with polynomial algebras is the Chinese
+remainder theorem, which describes the DFT algebraically and can be
+used as a tool to concisely derive various FFTs as well as convolution
+algorithms <link target-id="bid2"/>, <link target-id="bid3"/>, <link target-id="bid4"/>, <link target-id="bid5"/>
+(see also <link document="m16333">Winograd’s Short DFT Algorithms</link>). The polynomial algebra
+framework was fully developed for signal processing as part of the
+algebraic signal processing theory (ASP). ASP identifies the structure
+underlying many transforms used in signal processing, provides deep
+insight into their properties, and enables the derivation of their
+fast algorithms
+<link target-id="bid6"/>, <link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>. Here we
+focus on the algebraic description of the DFT and on the algebraic
+derivation of the general-radix Cooley-Tukey FFT from 
+<link document="m16330">Factoring the Signal Processing Operators</link>. The derivation will make use of and extend the
+<link document="m16327">Polynomial Description of Signals</link>.
+
+We start with motivating the appearance
+of modulo operations.</para>
+    <para id="id2255640">The <m:math><m:mi>z</m:mi></m:math>-transform associates with infinite discrete signals <m:math><m:mrow><m:mi>X</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>(</m:mo><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>)</m:mo></m:mrow></m:math> a Laurent series:</para>
+    <equation id="uid1"><m:math mode="display">
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mo>↦</m:mo>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:munder>
+<m:mrow>
+            <m:mo>∑</m:mo>
+</m:mrow>          
+  <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>∈</m:mo>
+              <m:mi mathvariant="double-struck">Z</m:mi>
+            </m:mrow>
+          </m:munder>
+          <m:mi>x</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+          <m:mo>.</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256014">Here we used <m:math><m:mrow><m:mi>s</m:mi><m:mo>=</m:mo><m:msup><m:mi>z</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:mrow></m:math> to simplify the notation in the following.
+The DTFT of <m:math><m:mi>X</m:mi></m:math> is the evaluation of <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> on the unit circle </para>
+    <equation id="uid2">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mo>(</m:mo>
+          <m:msup>
+            <m:mi>e</m:mi>
+            <m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>j</m:mi>
+              <m:mi>ω</m:mi>
+            </m:mrow>
+          </m:msup>
+          <m:mo>)</m:mo>
+          <m:mo>,</m:mo>
+          <m:mspace width="1.em"/>
+          <m:mo>-</m:mo>
+          <m:mi>π</m:mi>
+          <m:mo>&lt;</m:mo>
+          <m:mi>ω</m:mi>
+          <m:mo>≤</m:mo>
+          <m:mi>π</m:mi>
+          <m:mo>.</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256119">Finally, filtering or (linear) convolution is simply the multiplication
+of Laurent series,</para>
+    <equation id="uid3">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>H</m:mi>
+          <m:mo>*</m:mo>
+          <m:mi>X</m:mi>
+          <m:mo>↔</m:mo>
+          <m:mi>H</m:mi>
+          <m:mo>(</m:mo>
+          <m:mi>s</m:mi>
+          <m:mo>)</m:mo>
+          <m:mi>X</m:mi>
+          <m:mo>(</m:mo>
+          <m:mi>s</m:mi>
+          <m:mo>)</m:mo>
+          <m:mo>.</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256165">For finite signals <m:math><m:mrow><m:mi>X</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>)</m:mo></m:mrow></m:math> one expects that the
+equivalent of <link target-id="uid1"/> becomes a mapping to polynomials of
+degree <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>,</para>
+    <equation id="uid4"><m:math mode="display">
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mo>↦</m:mo>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:munderover>
+<m:mrow>
+            <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:mi>x</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+          <m:mo>,</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256301">and that the DFT is an evaluation of these polynomials. Indeed, the
+definition of the DFT in <link document="m16333">Winograd’s Short DFT Algorithms</link> shows that</para>
+    <equation id="uid5">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>C</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>k</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mi>k</m:mi>
+            </m:msubsup>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msup>
+              <m:mi>e</m:mi>
+              <m:mrow>
+                <m:mo>-</m:mo>
+                <m:mi>j</m:mi>
+                <m:mfrac>
+                  <m:mrow>
+                    <m:mn>2</m:mn>
+                    <m:mi>π</m:mi>
+                    <m:mi>k</m:mi>
+                  </m:mrow>
+                  <m:mi>N</m:mi>
+                </m:mfrac>
+              </m:mrow>
+            </m:msup>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>,</m:mo>
+          <m:mspace width="1.em"/>
+          <m:mn>0</m:mn>
+          <m:mo>≤</m:mo>
+          <m:mi>k</m:mi>
+          <m:mo>&lt;</m:mo>
+          <m:mi>N</m:mi>
+          <m:mo>,</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256403">i.e., the DFT computes the evaluations of the polynomial <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+at the <m:math><m:mi>n</m:mi></m:math>th roots of unity.</para>
+    <para id="id2256443">The problem arises with the equivalent of <link target-id="uid3"/>,
+since the multiplication <m:math><m:mrow><m:mi>H</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> of two polynomials of degree <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>
+yields one of degree <m:math><m:mrow><m:mn>2</m:mn><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>2</m:mn></m:mrow></m:math>. Also, it does not coincide with the
+circular convolution known to be associated with the DFT. The solution
+to both problems is to reduce the product modulo <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>:</para>
+    <equation id="uid6">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>H</m:mi>
+          <m:msub>
+            <m:mo>*</m:mo>
+            <m:mtext>circ</m:mtext>
+          </m:msub>
+          <m:mi>X</m:mi>
+          <m:mo>↔</m:mo>
+          <m:mi>H</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mspace width="4.pt"/>
+          <m:mtext>mod</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msup>
+              <m:mi>s</m:mi>
+              <m:mi>n</m:mi>
+            </m:msup>
+            <m:mo>-</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>.</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <table id="element-748" summary="Table with five rows and three columns. The first row is a header categorizing the displayed data between finite and infinite time. The First column is a header, categorizing the corresponding data into specific concepts.">
+<tgroup cols="3"><tbody>
+  <row>
+    <entry>Concept</entry>
+    <entry>Infinite Time</entry>
+    <entry>Finite Time</entry>
+  </row>
+  <row>
+    <entry>Signal</entry>
+    <entry><m:math>
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mo>∑</m:mo>
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>∈</m:mo>
+              <m:mi mathvariant="double-struck">Z</m:mi>
+            </m:mrow>
+          </m:msub>
+          <m:mi>x</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+        </m:mrow>
+      </m:math>
+    </entry>
+    <entry> <m:math>
+        <m:mrow>
+          <m:msubsup>
+            <m:mo>∑</m:mo>
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:msubsup>
+          <m:mi>x</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+        </m:mrow>
+      </m:math>
+    </entry>
+  </row>
+  <row>
+    <entry>Filter</entry>
+    <entry> <m:math>
+        <m:mrow>
+          <m:mi>H</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mo>∑</m:mo>
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>∈</m:mo>
+              <m:mi mathvariant="double-struck">Z</m:mi>
+            </m:mrow>
+          </m:msub>
+          <m:mi>h</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+        </m:mrow>
+      </m:math></entry>
+    <entry><m:math>
+        <m:mrow>
+          <m:msubsup>
+            <m:mo>∑</m:mo>
+            <m:mrow>
+              <m:mi>n</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:msubsup>
+          <m:mi>h</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>n</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:msup>
+            <m:mi>s</m:mi>
+            <m:mi>n</m:mi>
+          </m:msup>
+        </m:mrow>
+      </m:math></entry>
+  </row>
+  <row>
+    <entry>Convolution</entry>
+    <entry> <m:math>
+        <m:mrow>
+          <m:mi>H</m:mi>
+          <m:mo>(</m:mo>
+          <m:mi>s</m:mi>
+          <m:mo>)</m:mo>
+          <m:mi>X</m:mi>
+          <m:mo>(</m:mo>
+          <m:mi>s</m:mi>
+          <m:mo>)</m:mo>
+        </m:mrow>
+      </m:math></entry>
+    <entry>
+      <m:math>
+        <m:mrow>
+          <m:mi>H</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mi>X</m:mi>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:mi>s</m:mi>
+            <m:mo>)</m:mo>
+          </m:mrow>
+          <m:mtext>mod</m:mtext>
+          <m:mrow>
+            <m:mo>(</m:mo>
+            <m:msup>
+              <m:mi>s</m:mi>
+              <m:mi>n</m:mi>
+            </m:msup>
+            <m:mo>-</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>)</m:mo>
+          </m:mrow>
+        </m:mrow>
+      </m:math>
+    </entry>
+  </row>
+  <row>
+    <entry>Fourier transform</entry>
+    <entry><m:math>
+        <m:mrow>
+          <m:mtext>DTFT:</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mi>X</m:mi>
+          <m:mo>(</m:mo>
+          <m:msup>
+            <m:mi>e</m:mi>
+            <m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>j</m:mi>
+              <m:mi>ω</m:mi>
+            </m:mrow>
+          </m:msup>
+          <m:mo>)</m:mo>
+          <m:mo>,</m:mo>
+          <m:mspace width="1.em"/>
+          <m:mo>-</m:mo>
+          <m:mi>π</m:mi>
+          <m:mo>&lt;</m:mo>
+          <m:mi>ω</m:mi>
+          <m:mo>≤</m:mo>
+          <m:mi>π</m:mi>
+        </m:mrow>
+      </m:math></entry>
+    <entry><m:math>
+        <m:mrow>
+          <m:mtext>DFT:</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mi>X</m:mi>
+          <m:mo>(</m:mo>
+          <m:msup>
+            <m:mi>e</m:mi>
+            <m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>j</m:mi>
+              <m:mfrac>
+                <m:mrow>
+                  <m:mn>2</m:mn>
+                  <m:mi>π</m:mi>
+                  <m:mi>k</m:mi>
+                </m:mrow>
+                <m:mi>n</m:mi>
+              </m:mfrac>
+            </m:mrow>
+          </m:msup>
+          <m:mo>)</m:mo>
+          <m:mo>,</m:mo>
+          <m:mspace width="1.em"/>
+          <m:mn>0</m:mn>
+          <m:mo>≤</m:mo>
+          <m:mi>k</m:mi>
+          <m:mo>&lt;</m:mo>
+          <m:mi>n</m:mi>
+        </m:mrow>
+      </m:math></entry>
+  </row>
+</tbody>
+
+
+
+
+
+
+
+
+</tgroup><caption>Infinite and finite discrete time signal processing.</caption>
+</table><para id="id2256601">The resulting polynomial then has again degree <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math> and this form of
+convolution becomes equivalent to circular convolution of the
+polynomial coefficients. We also observe that the evaluation points in
+<link target-id="uid5"/> are precisely the roots of <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>. This connection will
+become clear in this chapter.</para>
+    <para id="id2256649">The discussion is summarized in <link target-id="element-748"/>.</para>
+    <para id="id2256656">The proper framework to describe the multiplication of polynomials
+modulo a fixed polynomial are polynomial algebras. Together with the
+Chinese remainder theorem, they provide the theoretical underpinning
+for the DFT and the Cooley-Tukey FFT.</para>
+    <para id="id2256663">In this chapter, the DFT will naturally arise as a linear mapping with
+respect to chosen bases, i.e., as a matrix. Indeed, the definition
+shows that if all input and outputs are collected into
+vectors <m:math><m:mrow><m:mi>X</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mi>X</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>)</m:mo></m:mrow></m:math> and <m:math><m:mrow><m:mi>C</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mi>C</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mi>C</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>)</m:mo></m:mrow></m:math>, then
+<link document="m16333">Winograd’s Short DFT Algorithms</link> is equivalent to</para>
+    <equation id="uid7">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>C</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mo form="prefix">DFT</m:mo>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mi>X</m:mi>
+          <m:mo>,</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256787">where</para>
+    <equation id="uid8">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mo form="prefix">DFT</m:mo>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:mi>k</m:mi>
+                  <m:mi>n</m:mi>
+                </m:mrow>
+              </m:msubsup>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mrow>
+              <m:mn>0</m:mn>
+              <m:mo>≤</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>,</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>&lt;</m:mo>
+              <m:mi>N</m:mi>
+            </m:mrow>
+          </m:msub>
+          <m:mo>.</m:mo>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256856">The matrix point of view is adopted in the FFT books
+<link target-id="bid10"/>, <link target-id="bid11"/>.</para>
+    <section id="uid9">
+      <title>Polynomial Algebras and the DFT</title>
+      <para id="id2256880">In this section we introduce polynomial algebras and explain how they
+are associated to transforms. Then we identify this connection for the
+DFT. Later we use polynomial algebras to derive the Cooley-Tukey FFT.</para>
+      <para id="id2256887">For further background on the mathematics in this section and
+polynomial algebras in particular, we refer to <link target-id="bid1"/>.</para>
+      <section id="uid10">
+        <title>Polynomial Algebra</title>
+        <para id="id2256904">An algebra <m:math><m:mi mathvariant="script">A</m:mi></m:math> is a vector space that also provides a
+multiplication of its elements such that the distributivity law holds
+(see <link target-id="bid1"/> for a complete definition). Examples include
+the sets of complex or real numbers <m:math><m:mi mathvariant="double-struck">C</m:mi></m:math> or <m:math><m:mi mathvariant="double-struck">R</m:mi></m:math>, and the sets of
+complex or real polynomials in the variable <m:math><m:mi>s</m:mi></m:math>: <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow></m:math> or <m:math><m:mrow><m:mi mathvariant="double-struck">R</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow></m:math>.</para>
+        <para id="id2256996">The key player in this chapter is the <emphasis>polynomial algebra</emphasis>. Given
+a fixed polynomial <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> of degree <m:math><m:mrow><m:mo form="prefix">deg</m:mo><m:mo>(</m:mo><m:mi>P</m:mi><m:mo>)</m:mo><m:mo>=</m:mo><m:mi>N</m:mi></m:mrow></m:math>, we define a
+polynomial algebra as the set</para>
+        <equation id="id2257045">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi mathvariant="double-struck">C</m:mi>
+              <m:mo>[</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>]</m:mo>
+              <m:mo>/</m:mo>
+              <m:mi>P</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mo>{</m:mo>
+              <m:mi>X</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>∣</m:mo>
+              <m:mo form="prefix">deg</m:mo>
+              <m:mo>(</m:mo>
+              <m:mi>X</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>&lt;</m:mo>
+              <m:mo form="prefix">deg</m:mo>
+              <m:mo>(</m:mo>
+              <m:mi>P</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>}</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257116">of polynomials of degree smaller than <m:math><m:mi>N</m:mi></m:math> with addition and
+multiplication modulo <m:math><m:mi>P</m:mi></m:math>. Viewed as a vector space, <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+hence has dimension <m:math><m:mi>N</m:mi></m:math>.</para>
+        <para id="id2257180">Every polynomial <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mo>∈</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow></m:math> is reduced to a unique polynomial
+<m:math><m:mrow><m:mi>R</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> modulo <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> of degree smaller than <m:math><m:mi>N</m:mi></m:math>. <m:math><m:mrow><m:mi>R</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> is computed
+using division with rest, namely</para>
+        <equation id="id2257271">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>Q</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mi>P</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>+</m:mo>
+              <m:mi>R</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>,</m:mo>
+              <m:mspace width="1.em"/>
+              <m:mo form="prefix">deg</m:mo>
+              <m:mo>(</m:mo>
+              <m:mi>R</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>&lt;</m:mo>
+              <m:mo form="prefix">deg</m:mo>
+              <m:mo>(</m:mo>
+              <m:mi>P</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257350">Regarding this equation modulo <m:math><m:mi>P</m:mi></m:math>, <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> becomes zero, and we get</para>
+        <equation id="id2257381">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>≡</m:mo>
+              <m:mi>R</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mspace width="4.pt"/>
+              <m:mtext>mod</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mi>P</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257429">We read this equation as “<m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> is congruent (or equal) <m:math><m:mrow><m:mi>R</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+modulo <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>.” We will also write <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mspace width="4.pt"/><m:mtext>mod</m:mtext><m:mspace width="4.pt"/><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> to denote
+that <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> is reduced modulo <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>. Obviously,</para>
+        <equation id="id2257550">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>P</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>≡</m:mo>
+              <m:mn>0</m:mn>
+              <m:mspace width="4.pt"/>
+              <m:mtext>mod</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mi>P</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257592">As a simple example we consider <m:math><m:mrow><m:mi mathvariant="script">A</m:mi><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, which has
+dimension 2. A possible basis is <m:math><m:mrow><m:mi>b</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>. In <m:math><m:mi mathvariant="script">A</m:mi></m:math>, for example,
+<m:math><m:mrow><m:mi>s</m:mi><m:mo>·</m:mo><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>+</m:mo><m:mi>s</m:mi><m:mo>≡</m:mo><m:mi>s</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mspace width="4.pt"/><m:mtext>mod</m:mtext><m:mspace width="4.pt"/><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, obtained
+through division with rest</para>
+        <equation id="id2257749">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mn>2</m:mn>
+              </m:msup>
+              <m:mo>+</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>=</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>·</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msup>
+                  <m:mi>s</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msup>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>s</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2257809">or simply by replacing <m:math><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup></m:math> with 1 (since <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math> implies <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math>).</para>
+      </section>
+      <section id="uid11">
+        <title>Chinese Remainder Theorem (CRT)</title>
+        <para id="id2257881">Assume <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mo>=</m:mo><m:mi>Q</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mi>R</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> factors into two coprime (no common factors)
+polynomials <m:math><m:mi>Q</m:mi></m:math> and <m:math><m:mi>R</m:mi></m:math>. Then the Chinese remainder theorem (CRT) for
+polynomials is the linear mapping<footnote id="id11643239">More precisely, isomorphism
+of algebras or isomorphism of <m:math><m:mi mathvariant="script">A</m:mi></m:math>-modules.</footnote></para>
+        <equation id="id2257960">
+          <m:math mode="display">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>Δ</m:mi>
+                    <m:mo>:</m:mo>
+                    <m:mspace width="4pt"/>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mo>[</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>]</m:mo>
+                    <m:mo>/</m:mo>
+                    <m:mi>P</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mo>[</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>]</m:mo>
+                    <m:mo>/</m:mo>
+                    <m:mi>Q</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mo>⊕</m:mo>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mo>[</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>]</m:mo>
+                    <m:mo>/</m:mo>
+                    <m:mi>R</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>X</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd>
+                  <m:mo>↦</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mi>Q</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mo>,</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mi>R</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                    <m:mo>)</m:mo>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2258142">Here, <m:math><m:mo>⊕</m:mo></m:math> is the Cartesian product of vector spaces with
+elementwise operation (also called outer direct sum). In words, the CRT
+asserts that computing (addition, multiplication, scalar
+multiplication) in <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> is equivalent to computing in parallel
+in <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>Q</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> and <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>R</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math>.</para>
+        <para id="id2258249">If we choose bases <m:math><m:mrow><m:mi>b</m:mi><m:mo>,</m:mo><m:mi>c</m:mi><m:mo>,</m:mo><m:mi>d</m:mi></m:mrow></m:math> in the three polynomial algebras, then
+<m:math><m:mi>Δ</m:mi></m:math> can be expressed as a matrix. As usual with linear mappings,
+this matrix is obtained by mapping every element of <m:math><m:mi>b</m:mi></m:math> with <m:math><m:mi>Δ</m:mi></m:math>,
+expressing it in the concatenation <m:math><m:mrow><m:mi>c</m:mi><m:mo>∪</m:mo><m:mi>d</m:mi></m:mrow></m:math> of the bases <m:math><m:mi>c</m:mi></m:math> and <m:math><m:mi>d</m:mi></m:math>,
+and writing the results into the columns of the matrix.</para>
+        <para id="id2258336">As an example, we consider again the polynomial <m:math><m:mrow><m:mi>P</m:mi><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msup><m:mi>s</m:mi><m:mn>2</m:mn></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>=</m:mo><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> and the CRT decomposition</para>
+        <equation id="id2258398">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>Δ</m:mi>
+              <m:mo>:</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mi mathvariant="double-struck">C</m:mi>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:mi>s</m:mi>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>/</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msup>
+                  <m:mi>s</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msup>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>→</m:mo>
+              <m:mi mathvariant="double-struck">C</m:mi>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:mi>s</m:mi>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>/</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>⊕</m:mo>
+              <m:mi mathvariant="double-struck">C</m:mi>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:mi>s</m:mi>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>/</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258504">As bases, we choose <m:math><m:mrow><m:mi>b</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>)</m:mo><m:mo>,</m:mo><m:mspace width="4pt"/><m:mi>c</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>,</m:mo><m:mspace width="4pt"/><m:mi>d</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math>. <m:math><m:mrow><m:mi>Δ</m:mi><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math> with the same coordinate vector in <m:math><m:mrow><m:mi>c</m:mi><m:mo>∪</m:mo><m:mi>d</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math>. Further,
+because of <m:math><m:mrow><m:mi>x</m:mi><m:mo>≡</m:mo><m:mn>1</m:mn><m:mspace width="4.pt"/><m:mtext>mod</m:mtext><m:mspace width="4.pt"/><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math> and <m:math><m:mrow><m:mi>x</m:mi><m:mo>≡</m:mo><m:mo>-</m:mo><m:mn>1</m:mn><m:mspace width="4.pt"/><m:mtext>mod</m:mtext><m:mspace width="4.pt"/><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math>, <m:math><m:mrow><m:mi>Δ</m:mi><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>)</m:mo><m:mo>=</m:mo><m:mo>(</m:mo><m:mi>x</m:mi><m:mo>,</m:mo><m:mi>x</m:mi><m:mo>)</m:mo><m:mo>≡</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math> with the same coordinate
+vector. Thus, <m:math><m:mi>Δ</m:mi></m:math> in matrix form is the so-called butterfly
+matrix, which is a DFT of size 2: <m:math><m:mrow><m:msub><m:mo form="prefix">DFT</m:mo><m:mn>2</m:mn></m:msub><m:mo>=</m:mo><m:mrow><m:mo>[</m:mo>
+<m:mtable>
+<m:mtr><m:mtd><m:mn>1</m:mn></m:mtd> <m:mtd><m:mn>1</m:mn></m:mtd></m:mtr>
+<m:mtr><m:mtd><m:mn>1</m:mn></m:mtd> <m:mtd><m:mn>-1</m:mn></m:mtd></m:mtr>
+</m:mtable>
+<m:mo>]</m:mo></m:mrow></m:mrow></m:math>.</para>
+      </section>
+      <section id="uid13">
+        <title>Polynomial Transforms</title>
+        <para id="id2258793">Assume <m:math><m:mrow><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo><m:mo>∈</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow></m:math> has pairwise distinct
+zeros <m:math><m:mrow><m:mi>α</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:msub><m:mi>α</m:mi><m:mn>0</m:mn></m:msub><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msub><m:mi>α</m:mi><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msub><m:mo>)</m:mo></m:mrow></m:math>. Then the CRT
+can be used to completely
+decompose <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> into its <emphasis>spectrum</emphasis>:</para>
+        <equation id="uid14">
+          <m:math mode="display">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>Δ</m:mi>
+                    <m:mo>:</m:mo>
+                    <m:mspace width="4pt"/>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mo>[</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>]</m:mo>
+                    <m:mo>/</m:mo>
+                    <m:mi>P</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>⊕</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>⊕</m:mo>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>X</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mo>↦</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>,</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd/>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mo>=</m:mo>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>,</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mi>α</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>)</m:mo>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2259214">If we choose a basis <m:math><m:mrow><m:mi>b</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:msub><m:mi>P</m:mi><m:mn>0</m:mn></m:msub><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msub><m:mi>P</m:mi><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msub><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math> in <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> and
+bases <m:math><m:mrow><m:msub><m:mi>b</m:mi><m:mi>i</m:mi></m:msub><m:mo>=</m:mo><m:mrow><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> in each <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>-</m:mo><m:msub><m:mi>α</m:mi><m:mi>i</m:mi></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, then <m:math><m:mi>Δ</m:mi></m:math>, as a linear
+mapping, is represented by a matrix. The matrix is obtained by mapping
+every basis element <m:math><m:msub><m:mi>P</m:mi><m:mi>n</m:mi></m:msub></m:math>, <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:mi>N</m:mi></m:mrow></m:math>, and collecting the results in
+the columns of the matrix. The result is</para>
+        <equation id="id2259419">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi mathvariant="script">P</m:mi>
+                <m:mrow>
+                  <m:mi>b</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>α</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:msub>
+                    <m:mi>P</m:mi>
+                    <m:mi>n</m:mi>
+                  </m:msub>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:msub>
+                      <m:mi>α</m:mi>
+                      <m:mi>k</m:mi>
+                    </m:msub>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msub>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259492">and is called the <emphasis>polynomial transform</emphasis>
+for <m:math><m:mrow><m:mi mathvariant="script">A</m:mi><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo><m:mo>/</m:mo><m:mi>P</m:mi><m:mo>(</m:mo><m:mi>s</m:mi><m:mo>)</m:mo></m:mrow></m:math> with basis <m:math><m:mi>b</m:mi></m:math>.</para>
+        <para id="id2259549">If, in general, we choose <m:math><m:mrow><m:msub><m:mi>b</m:mi><m:mi>i</m:mi></m:msub><m:mo>=</m:mo><m:mrow><m:mo>(</m:mo><m:msub><m:mi>β</m:mi><m:mi>i</m:mi></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math> as spectral basis, then the
+matrix corresponding to the decomposition <link target-id="uid14"/> is the <emphasis>scaled
+polynomial transform</emphasis></para>
+        <equation id="id2259595">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mo form="prefix">diag</m:mo>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>/</m:mo>
+                <m:msub>
+                  <m:mi>β</m:mi>
+                  <m:mi>n</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msub>
+                <m:mi mathvariant="script">P</m:mi>
+                <m:mrow>
+                  <m:mi>b</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>α</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>,</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259660">where <m:math><m:mrow><m:msub><m:mo form="prefix">diag</m:mo><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:mi>N</m:mi></m:mrow></m:msub><m:mrow><m:mo>(</m:mo><m:msub><m:mi>γ</m:mi><m:mi>n</m:mi></m:msub><m:mo>)</m:mo></m:mrow></m:mrow></m:math> denotes a diagonal matrix
+with diagonal entries <m:math><m:msub><m:mi>γ</m:mi><m:mi>n</m:mi></m:msub></m:math>.</para>
+        <para id="id2259722">We jointly refer to polynomial transforms, scaled or not, as Fourier
+transforms.</para>
+      </section>
+      <section id="uid15">
+        <title>DFT as a Polynomial Transform</title>
+        <para id="id2259735">We show that the <m:math><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>N</m:mi></m:msub></m:math> is a polynomial transform for <m:math><m:mrow><m:mi mathvariant="script">A</m:mi><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> with basis <m:math><m:mrow><m:mi>b</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>s</m:mi><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msup><m:mi>s</m:mi><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>)</m:mo></m:mrow></m:math>. Namely,</para>
+        <equation id="id2259844"><m:math mode="display">
+            <m:mrow>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mi>N</m:mi>
+              </m:msup>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>=</m:mo>
+              <m:munder>
+<m:mrow>
+                <m:mo>∏</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:munder>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>-</m:mo>
+                <m:msubsup>
+                  <m:mi>W</m:mi>
+                  <m:mi>N</m:mi>
+                  <m:mi>k</m:mi>
+                </m:msubsup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>,</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259908">which means that <m:math><m:mi>Δ</m:mi></m:math> takes the form</para>
+        <equation id="uid16">
+          <m:math mode="display">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>Δ</m:mi>
+                    <m:mo>:</m:mo>
+                    <m:mspace width="4pt"/>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>N</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>⊕</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>⊕</m:mo>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mi>X</m:mi>
+                    <m:mo>(</m:mo>
+                    <m:mi>s</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mo>↦</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>,</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd/>
+                <m:mtd columnalign="right">
+                  <m:mrow>
+                    <m:mo>=</m:mo>
+                    <m:mo>(</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                    <m:mo>⋯</m:mo>
+                    <m:mo>,</m:mo>
+                    <m:mi>X</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>)</m:mo>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2260253">The associated polynomial transform hence becomes</para>
+        <equation id="id2260259">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi mathvariant="script">P</m:mi>
+                <m:mrow>
+                  <m:mi>b</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>α</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:msubsup>
+                    <m:mi>W</m:mi>
+                    <m:mi>N</m:mi>
+                    <m:mrow>
+                      <m:mi>k</m:mi>
+                      <m:mi>n</m:mi>
+                    </m:mrow>
+                  </m:msubsup>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mi>N</m:mi>
+              </m:msub>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260341">This interpretation of the DFT has been known at least since
+<link target-id="bid3"/>, <link target-id="bid2"/> and clarifies the connection between
+the evaluation points in <link target-id="uid5"/> and the circular convolution in
+<link target-id="uid6"/>.</para>
+        <para id="id2260369">In <link target-id="bid12"/>, DFTs of types 1–4 are defined, with type 1
+being the standard DFT. In the algebraic framework, type 3 is obtained
+by choosing <m:math><m:mrow><m:mi mathvariant="script">A</m:mi><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> as algebra with the same basis as
+before:</para>
+        <equation id="uid17">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi mathvariant="script">P</m:mi>
+                <m:mrow>
+                  <m:mi>b</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>α</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:msubsup>
+                    <m:mi>W</m:mi>
+                    <m:mi>N</m:mi>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>k</m:mi>
+                      <m:mo>+</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>/</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mo>)</m:mo>
+                      <m:mi>n</m:mi>
+                    </m:mrow>
+                  </m:msubsup>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mtext>-3</m:mtext>
+                </m:mrow>
+                <m:mi>N</m:mi>
+              </m:msub>
+              <m:mo>,</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260527">The DFTs of type 2 and 4 are scaled polynomial
+transforms <link target-id="bid6"/>.</para>
+      </section>
+    </section>
+    <section id="uid18">
+      <title>Algebraic Derivation of the Cooley-Tukey FFT</title>
+      <para id="id2260548">Knowing the polynomial algebra underlying the DFT enables us to derive
+the Cooley-Tukey FFT <emphasis>algebraically</emphasis>. This means that instead of
+manipulating the DFT definition, we manipulate the polynomial algebra
+<m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>. The basic idea is intuitive. We showed that the DFT
+is the matrix representation of the complete decomposition
+<link target-id="uid16"/>. The Cooley-Tukey FFT is now derived by performing this
+decomposition <emphasis>in steps</emphasis> as shown in <link target-id="uid19"/>. Each
+step yields a sparse matrix; hence, the <m:math><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>N</m:mi></m:msub></m:math> is factorized into a
+product of sparse matrices, which will be the matrix representation of
+the Cooley-Tukey FFT.</para>
+      <figure id="uid19" orient="horizontal"><media id="id11845975" alt=""><image src="../../media/figure1.png" mime-type="image/png" width="500" print-width="3in"/></media><caption>Basic idea behind the algebraic derivation of Cooley-Tukey
+type algorithms</caption></figure>
+      <para id="id2260645">This stepwise decomposition can be formulated generically for
+polynomial transforms <link target-id="bid13"/>, <link target-id="bid9"/>. Here, we
+consider only the DFT.</para>
+      <para id="id2260662">We first introduce the matrix notation we will use and in particular
+the Kronecker product formalism that became mainstream for FFTs
+in <link target-id="bid10"/>, <link target-id="bid11"/>.</para>
+      <para id="id2260678">Then we first derive the radix-2 FFT using a <emphasis>factorization</emphasis> of
+<m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>. Subsequently, we obtain the general-radix FFT using a <emphasis>decomposition</emphasis> of <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>.</para>
+      <section id="uid20">
+        <title>Matrix Notation</title>
+        <para id="id2260741">We denote the <m:math><m:mrow><m:mi>N</m:mi><m:mo>×</m:mo><m:mi>N</m:mi></m:mrow></m:math> identity matrix with <m:math><m:msub><m:mi>I</m:mi><m:mi>N</m:mi></m:msub></m:math>, and diagonal
+matrices with</para>
+        <equation id="id2260775">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mo form="prefix">diag</m:mo>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>k</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>γ</m:mi>
+                  <m:mi>k</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mfenced open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>γ</m:mi>
+                        <m:mn>0</m:mn>
+                      </m:msub>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd/>
+                    <m:mtd>
+                      <m:mo>⋱</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd/>
+                    <m:mtd/>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>γ</m:mi>
+                        <m:mrow>
+                          <m:mi>N</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msub>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260861">The <m:math><m:mrow><m:mi>N</m:mi><m:mo>×</m:mo><m:mi>N</m:mi></m:mrow></m:math> <emphasis>stride
+permutation</emphasis> matrix is defined for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mi>K</m:mi><m:mi>M</m:mi></m:mrow></m:math> by the permutation</para>
+        <equation id="uid21">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msubsup>
+                <m:mi>L</m:mi>
+                <m:mi>M</m:mi>
+                <m:mi>N</m:mi>
+              </m:msubsup>
+              <m:mo>:</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mi>i</m:mi>
+              <m:mi>K</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mo>↦</m:mo>
+              <m:mi>j</m:mi>
+              <m:mi>M</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>i</m:mi>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260953">for <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>i</m:mi><m:mo>&lt;</m:mo><m:mi>K</m:mi><m:mo>,</m:mo><m:mspace width="4pt"/><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>j</m:mi><m:mo>&lt;</m:mo><m:mi>M</m:mi></m:mrow></m:math>. This definition shows that <m:math><m:msubsup><m:mi>L</m:mi><m:mi>M</m:mi><m:mi>N</m:mi></m:msubsup></m:math>
+transposes a <m:math><m:mrow><m:mi>K</m:mi><m:mo>×</m:mo><m:mi>M</m:mi></m:mrow></m:math> matrix stored in row-major order.
+Alternatively, we can write</para>
+        <equation id="id2261028"><m:math>
+<m:msubsup>
+<m:mi>L</m:mi>
+<m:mi>M</m:mi>
+<m:mi>N</m:mi>
+</m:msubsup>
+<m:mspace width="3pt"/>
+<m:mtext>:</m:mtext>
+<m:mspace width="3pt"/>
+<m:mi>i</m:mi>
+<m:mspace width="3pt"/>
+<m:mo>↦</m:mo>
+<m:mspace width="3pt"/>
+<m:mi>iM</m:mi>
+<m:mspace width="3pt"/>
+<m:mtext>mod</m:mtext>
+<m:mspace width="3pt"/>
+<m:mi>N</m:mi>
+<m:mo>-</m:mo>
+<m:mn>1</m:mn>
+<m:mo>,</m:mo>
+<m:mspace width="5pt"/>
+<m:mtext>for</m:mtext>
+<m:mspace width="3pt"/>
+<m:mn>0</m:mn>
+<m:mo>≤</m:mo>
+<m:mi>i</m:mi>
+<m:mo>&lt;</m:mo>
+<m:mi>N</m:mi>
+<m:mo>-</m:mo>
+<m:mn>1</m:mn>
+<m:mo>,</m:mo>
+<m:mspace width="5pt"/>
+<m:mi>N</m:mi>
+<m:mo>-</m:mo>
+<m:mn>1</m:mn>
+<m:mspace width="3pt"/>
+<m:mo>↦</m:mo>
+<m:mspace width="3pt"/>
+<m:mi>N</m:mi>
+<m:mo>-</m:mo>
+<m:mn>1</m:mn>
+<m:mo>.</m:mo>
+</m:math></equation>
+        <para id="id2261140">For example (<m:math><m:mo>·</m:mo></m:math> means 0),</para>
+        <equation id="id2261155">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msubsup>
+                <m:mi>L</m:mi>
+                <m:mn>2</m:mn>
+                <m:mn>6</m:mn>
+              </m:msubsup>
+              <m:mo>=</m:mo>
+              <m:mfenced separators="" open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>·</m:mo>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mn>1</m:mn>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261318"><m:math><m:msubsup><m:mi>L</m:mi><m:mrow><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow><m:mi>N</m:mi></m:msubsup></m:math> is sometimes called the perfect shuffle.</para>
+        <para id="id2261346">Further, we use matrix operators; namely the direct sum</para>
+        <equation id="id2261350">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>A</m:mi>
+              <m:mo>⊕</m:mo>
+              <m:mi>B</m:mi>
+              <m:mo>=</m:mo>
+              <m:mfenced open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mi>A</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd/>
+                    <m:mtd>
+                      <m:mi>B</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261385">and the Kronecker or tensor product</para>
+        <equation id="id2261391">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>A</m:mi>
+              <m:mo>⊗</m:mo>
+              <m:mi>B</m:mi>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:msub>
+                    <m:mi>a</m:mi>
+                    <m:mrow>
+                      <m:mi>k</m:mi>
+                      <m:mo>,</m:mo>
+                      <m:mi>ℓ</m:mi>
+                    </m:mrow>
+                  </m:msub>
+                  <m:mi>B</m:mi>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>k</m:mi>
+                  <m:mo>,</m:mo>
+                  <m:mi>ℓ</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>,</m:mo>
+              <m:mspace width="1.em"/>
+              <m:mtext>for</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mi>A</m:mi>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>a</m:mi>
+                  <m:mrow>
+                    <m:mi>k</m:mi>
+                    <m:mo>,</m:mo>
+                    <m:mi>ℓ</m:mi>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261477">In particular,</para>
+        <equation id="id2261483">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>I</m:mi>
+                <m:mi>n</m:mi>
+              </m:msub>
+              <m:mo>⊗</m:mo>
+              <m:mi>A</m:mi>
+              <m:mo>=</m:mo>
+              <m:mi>A</m:mi>
+              <m:mo>⊕</m:mo>
+              <m:mo>⋯</m:mo>
+              <m:mo>⊕</m:mo>
+              <m:mi>A</m:mi>
+              <m:mo>=</m:mo>
+              <m:mfenced open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mi>A</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd/>
+                    <m:mtd>
+                      <m:mo>⋱</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd/>
+                    <m:mtd/>
+                    <m:mtd>
+                      <m:mi>A</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261544">is block-diagonal.</para>
+        <para id="id2261549">We may also construct a larger matrix as a matrix of
+matrices, e.g.,</para>
+        <equation id="id2261554">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mfenced separators="" open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mi>A</m:mi>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mi>B</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:mi>B</m:mi>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mi>A</m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261589">If an algorithm for a transform is given as a product of sparse matrices
+built from the constructs above, then an algorithm for the transpose or
+inverse of the transform can be readily derived using mathematical
+properties including</para>
+        <equation id="uid22">
+          <m:math mode="display">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mo>⊕</m:mo>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>⊕</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mo>⊕</m:mo>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>⊕</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mo>⊗</m:mo>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>⊗</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mi>T</m:mi>
+                    </m:msup>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi>A</m:mi>
+                        <m:mo>⊗</m:mo>
+                        <m:mi>B</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>=</m:mo>
+                    <m:msup>
+                      <m:mi>A</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>⊗</m:mo>
+                    <m:msup>
+                      <m:mi>B</m:mi>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                      </m:mrow>
+                    </m:msup>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2261891">Permutation matrices are orthogonal, i.e., <m:math><m:mrow><m:msup><m:mi>P</m:mi><m:mi>T</m:mi></m:msup><m:mo>=</m:mo><m:msup><m:mi>P</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:mrow></m:math>. The
+transposition or inversion of diagonal matrices is obvious.</para>
+      </section>
+      <section id="uid23">
+        <title>Radix-2 FFT</title>
+        <para id="id2261934">The DFT decomposes <m:math><m:mrow><m:mi mathvariant="script">A</m:mi><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> with basis <m:math><m:mrow><m:mi>b</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>s</m:mi><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msup><m:mi>s</m:mi><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>)</m:mo></m:mrow></m:math> as shown in <link target-id="uid16"/>. We assume <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mn>2</m:mn><m:mi>M</m:mi></m:mrow></m:math>.
+Then</para>
+        <equation id="id2262048">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mrow>
+                  <m:mn>2</m:mn>
+                  <m:mi>M</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msup>
+                  <m:mi>s</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msup>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msup>
+                  <m:mi>s</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msup>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262109">factors and we can apply the CRT in
+the following steps:</para>
+        <equation id="uid24"><m:math mode="display">
+            <m:mtable displaystyle="true">
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd/>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>N</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>⊕</m:mo>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+             
+            </m:mtable>
+          </m:math>
+        </equation>
+        <equation id="element-559"><m:math mode="display">
+            <m:mtable displaystyle="true">
+ <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mrow>
+                          <m:mn>2</m:mn>
+                          <m:mi>i</m:mi>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>⊕</m:mo>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>M</m:mi>
+                        <m:mrow>
+                          <m:mn>2</m:mn>
+                          <m:mi>i</m:mi>
+                          <m:mo>+</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+ </m:mtable>
+          </m:math></equation><equation id="element-872"><m:math mode="display">
+            <m:mtable displaystyle="true">
+ <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>N</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mi>i</m:mi>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+ </m:mtable>
+          </m:math></equation><para id="id2262434">As bases in the smaller algebras <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> and <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>,
+we choose <m:math><m:mrow><m:mi>c</m:mi><m:mo>=</m:mo><m:mi>d</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>s</m:mi><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msup><m:mi>s</m:mi><m:mrow><m:mi>M</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>)</m:mo></m:mrow></m:math>. The derivation of an
+algorithm for <m:math><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>N</m:mi></m:msub></m:math> based on <link target-id="uid24"/>-<link target-id="element-872"/> is now
+completely mechanical by reading off the matrix for each of the three
+decomposition steps. The product of these matrices is equal to
+the <m:math><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>N</m:mi></m:msub></m:math>.</para>
+        <para id="id2262610">First, we derive the base change matrix <m:math><m:mi>B</m:mi></m:math> corresponding to
+<link target-id="uid24"/>. To do so, we have to express the base elements
+<m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup><m:mo>∈</m:mo><m:mi>b</m:mi></m:mrow></m:math> in the basis <m:math><m:mrow><m:mi>c</m:mi><m:mo>∪</m:mo><m:mi>d</m:mi></m:mrow></m:math>; the coordinate
+vectors are the columns of <m:math><m:mi>B</m:mi></m:math>. For <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:mi>M</m:mi></m:mrow></m:math>, <m:math><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup></m:math> is actually
+contained in <m:math><m:mi>c</m:mi></m:math> and <m:math><m:mi>d</m:mi></m:math>, so the first <m:math><m:mi>M</m:mi></m:math> columns of <m:math><m:mi>B</m:mi></m:math> are</para>
+        <equation id="id2262743">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>B</m:mi>
+              <m:mo>=</m:mo>
+              <m:mfenced open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>*</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mo>*</m:mo>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>,</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262791">where the entries <m:math><m:mo>*</m:mo></m:math> are determined next.
+For the base elements <m:math><m:msup><m:mi>s</m:mi><m:mrow><m:mi>M</m:mi><m:mo>+</m:mo><m:mi>n</m:mi></m:mrow></m:msup></m:math>, <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:mi>M</m:mi></m:mrow></m:math>, we have</para>
+        <equation id="id2262846">
+          <m:math mode="display">
+            <m:mtable displaystyle="true">
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:msup>
+                    <m:mi>s</m:mi>
+                    <m:mrow>
+                      <m:mi>M</m:mi>
+                      <m:mo>+</m:mo>
+                      <m:mi>n</m:mi>
+                    </m:mrow>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:mo>≡</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msup>
+                      <m:mi>s</m:mi>
+                      <m:mi>n</m:mi>
+                    </m:msup>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:msup>
+                    <m:mi>s</m:mi>
+                    <m:mrow>
+                      <m:mi>M</m:mi>
+                      <m:mo>+</m:mo>
+                      <m:mi>n</m:mi>
+                    </m:mrow>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:mo>≡</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:msup>
+                      <m:mi>s</m:mi>
+                      <m:mi>n</m:mi>
+                    </m:msup>
+                    <m:mspace width="4.pt"/>
+                    <m:mtext>mod</m:mtext>
+                    <m:mspace width="4.pt"/>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>,</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2262981">which yields the final result</para>
+        <equation id="id2262988">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>B</m:mi>
+              <m:mo>=</m:mo>
+              <m:mfenced open="[" close="]">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mrow>
+                        <m:mphantom>
+                          <m:mo>-</m:mo>
+                        </m:mphantom>
+                        <m:msub>
+                          <m:mi>I</m:mi>
+                          <m:mi>M</m:mi>
+                        </m:msub>
+                      </m:mrow>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                    </m:mtd>
+                    <m:mtd>
+                      <m:mrow>
+                        <m:mo>-</m:mo>
+                        <m:msub>
+                          <m:mi>I</m:mi>
+                          <m:mi>M</m:mi>
+                        </m:msub>
+                      </m:mrow>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>⊗</m:mo>
+              <m:msub>
+                <m:mi>I</m:mi>
+                <m:mi>M</m:mi>
+              </m:msub>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2263076">Next, we consider step <link target-id="element-559"/>. <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> is decomposed
+by <m:math><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>M</m:mi></m:msub></m:math> and <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> by <m:math><m:msub><m:mrow><m:mo form="prefix">DFT</m:mo><m:mtext>-3</m:mtext></m:mrow><m:mi>M</m:mi></m:msub></m:math> in <link target-id="uid17"/>.</para>
+        <para id="id2263201">Finally, the permutation in step <link target-id="element-872"/> is the perfect
+shuffle <m:math><m:msubsup><m:mi>L</m:mi><m:mi>M</m:mi><m:mi>N</m:mi></m:msubsup></m:math>, which interleaves the even and odd spectral
+components (even and odd exponents of <m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math>).</para>
+        <para id="id2263241">The final algorithm obtained is</para>
+        <equation id="id2263245">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mrow>
+                  <m:mn>2</m:mn>
+                  <m:mi>M</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:msubsup>
+                <m:mi>L</m:mi>
+                <m:mi>M</m:mi>
+                <m:mi>N</m:mi>
+              </m:msubsup>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>⊕</m:mo>
+                <m:msub>
+                  <m:mrow>
+                    <m:mo form="prefix">DFT</m:mo>
+                    <m:mtext>-3</m:mtext>
+                  </m:mrow>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>⊗</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2263338">To obtain a better known form, we use <m:math><m:mrow><m:msub><m:mrow><m:mo form="prefix">DFT</m:mo><m:mtext>-3</m:mtext></m:mrow><m:mi>M</m:mi></m:msub><m:mo>=</m:mo><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>M</m:mi></m:msub><m:msub><m:mi>D</m:mi><m:mi>M</m:mi></m:msub></m:mrow></m:math>,
+with <m:math><m:mrow><m:msub><m:mi>D</m:mi><m:mi>M</m:mi></m:msub><m:mo>=</m:mo><m:msub><m:mo form="prefix">diag</m:mo><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>i</m:mi><m:mo>&lt;</m:mo><m:mi>M</m:mi></m:mrow></m:msub><m:mrow><m:mo>(</m:mo><m:msubsup><m:mi>W</m:mi><m:mi>N</m:mi><m:mi>i</m:mi></m:msubsup><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, which is evident from
+<link target-id="uid17"/>. It yields</para>
+        <equation id="id2263443">
+          <m:math mode="display">
+            <m:mtable displaystyle="true">
+              <m:mtr>
+                <m:mtd columnalign="right">
+                  <m:msub>
+                    <m:mo form="prefix">DFT</m:mo>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mi>M</m:mi>
+                    </m:mrow>
+                  </m:msub>
+                </m:mtd>
+                <m:mtd>
+                  <m:mo>=</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msubsup>
+                      <m:mi>L</m:mi>
+                      <m:mi>M</m:mi>
+                      <m:mi>N</m:mi>
+                    </m:msubsup>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>⊕</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:msub>
+                        <m:mi>D</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>=</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msubsup>
+                      <m:mi>L</m:mi>
+                      <m:mi>M</m:mi>
+                      <m:mi>N</m:mi>
+                    </m:msubsup>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>⊕</m:mo>
+                      <m:msub>
+                        <m:mi>D</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mn>2</m:mn>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2263646">The last expression is the radix-2 decimation-in-frequency
+Cooley-Tukey FFT. The corresponding decimation-in-time version is
+obtained by transposition using <link target-id="uid22"/> and the symmetry of
+the DFT:</para>
+        <equation id="id2263659">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mrow>
+                  <m:mn>2</m:mn>
+                  <m:mi>M</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>⊗</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>⊕</m:mo>
+                <m:msub>
+                  <m:mi>D</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>⊗</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msubsup>
+                <m:mi>L</m:mi>
+                <m:mn>2</m:mn>
+                <m:mi>N</m:mi>
+              </m:msubsup>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2263770">The entries of the diagonal matrix <m:math><m:mrow><m:msub><m:mi>I</m:mi><m:mi>M</m:mi></m:msub><m:mo>⊕</m:mo><m:msub><m:mi>D</m:mi><m:mi>M</m:mi></m:msub></m:mrow></m:math> are
+commonly called <emphasis>twiddle factors</emphasis>.</para>
+        <para id="id2263807">The above method for deriving DFT algorithms is used extensively in
+<link target-id="bid2"/>.</para>
+      </section>
+      <section id="uid25">
+        <title>General-radix FFT</title>
+        <para id="id2263824">To algebraically derive the general-radix FFT, we use the <emphasis>decomposition property</emphasis> of <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>. Namely, if <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mi>K</m:mi><m:mi>M</m:mi></m:mrow></m:math> then</para>
+        <equation id="id2263872">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mi>N</m:mi>
+              </m:msup>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:msup>
+                    <m:mi>s</m:mi>
+                    <m:mi>M</m:mi>
+                  </m:msup>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>K</m:mi>
+              </m:msup>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2263920">Decomposition means that the polynomial is written as the composition
+of two polynomials: here, <m:math><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup></m:math> is inserted into <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>K</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>.
+Note that this is a special property: most polynomials do not decompose.</para>
+        <para id="id2263963">Based on this polynomial decomposition, we obtain the following
+stepwise decomposition of <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, which is more general than
+the previous one in <link target-id="uid24"/>–<link target-id="element-872"/>. The basic idea
+is to first decompose with respect to the outer polynomial <m:math><m:mrow><m:msup><m:mi>t</m:mi><m:mi>K</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:mi>t</m:mi><m:mo>=</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup></m:mrow></m:math>, and then completely <link target-id="bid13"/>:</para>
+        <equation id="uid26"><m:math mode="display">
+            <m:mtable displaystyle="true">
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd/>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>N</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>=</m:mo>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:msup>
+                            <m:mi>s</m:mi>
+                            <m:mi>M</m:mi>
+                          </m:msup>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:mi>K</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>K</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msup>
+                        <m:mi>s</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>K</m:mi>
+                        <m:mi>i</m:mi>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              
+            </m:mtable>
+          </m:math>
+        </equation>
+        <equation id="element-319"><m:math mode="display">
+            <m:mtable displaystyle="true">
+<m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>K</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>j</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mrow>
+                          <m:mi>j</m:mi>
+                          <m:mi>K</m:mi>
+                          <m:mo>+</m:mo>
+                          <m:mi>i</m:mi>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+  </m:mtable>
+          </m:math>
+</equation><equation id="element-149"><m:math mode="display">
+            <m:mtable displaystyle="true">
+<m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>→</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:munder>
+                      <m:mo>⊕</m:mo>
+                      <m:mrow>
+                        <m:mn>0</m:mn>
+                        <m:mo>≤</m:mo>
+                        <m:mi>i</m:mi>
+                        <m:mo>&lt;</m:mo>
+                        <m:mi>N</m:mi>
+                      </m:mrow>
+                    </m:munder>
+                    <m:mi mathvariant="double-struck">C</m:mi>
+                    <m:mrow>
+                      <m:mo>[</m:mo>
+                      <m:mi>s</m:mi>
+                      <m:mo>]</m:mo>
+                    </m:mrow>
+                    <m:mo>/</m:mo>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>x</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:msubsup>
+                        <m:mi>W</m:mi>
+                        <m:mi>N</m:mi>
+                        <m:mi>i</m:mi>
+                      </m:msubsup>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+          </m:mtable>
+          </m:math>
+</equation><para id="id2264377">As bases in the smaller algebras <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>-</m:mo><m:msubsup><m:mi>W</m:mi><m:mi>K</m:mi><m:mi>i</m:mi></m:msubsup><m:mo>)</m:mo></m:mrow></m:mrow></m:math> we choose
+<m:math><m:mrow><m:msub><m:mi>c</m:mi><m:mi>i</m:mi></m:msub><m:mo>=</m:mo><m:mrow><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mi>s</m:mi><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:msup><m:mi>s</m:mi><m:mrow><m:mi>M</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>)</m:mo></m:mrow></m:mrow></m:math>. As before, the derivation is completely
+mechanical from here: only the three matrices corresponding to
+<link target-id="uid26"/>–<link target-id="element-149"/> have to be read off.</para>
+        <para id="id2264488">The first decomposition step requires us to compute <m:math><m:mrow><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup><m:mspace width="4.pt"/><m:mtext>mod</m:mtext><m:mspace width="4.pt"/><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>-</m:mo><m:msubsup><m:mi>W</m:mi><m:mi>K</m:mi><m:mi>i</m:mi></m:msubsup><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:mi>N</m:mi></m:mrow></m:math>. To do so, we decompose the index
+<m:math><m:mi>n</m:mi></m:math> as <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mi>ℓ</m:mi><m:mi>M</m:mi><m:mo>+</m:mo><m:mi>m</m:mi></m:mrow></m:math> and compute</para>
+        <equation id="id2264593">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mi>n</m:mi>
+              </m:msup>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mrow>
+                  <m:mi>ℓ</m:mi>
+                  <m:mi>M</m:mi>
+                  <m:mo>+</m:mo>
+                  <m:mi>m</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:msup>
+                    <m:mi>s</m:mi>
+                    <m:mi>M</m:mi>
+                  </m:msup>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mi>ℓ</m:mi>
+              </m:msup>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mi>m</m:mi>
+              </m:msup>
+              <m:mo>≡</m:mo>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>k</m:mi>
+                <m:mrow>
+                  <m:mi>ℓ</m:mi>
+                  <m:mi>m</m:mi>
+                </m:mrow>
+              </m:msubsup>
+              <m:msup>
+                <m:mi>s</m:mi>
+                <m:mi>m</m:mi>
+              </m:msup>
+              <m:mspace width="4.pt"/>
+              <m:mtext>mod</m:mtext>
+              <m:mspace width="4.pt"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msup>
+                  <m:mi>s</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msup>
+                <m:mo>-</m:mo>
+                <m:msubsup>
+                  <m:mi>W</m:mi>
+                  <m:mi>K</m:mi>
+                  <m:mi>i</m:mi>
+                </m:msubsup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2264717">This shows that the matrix for <link target-id="uid26"/>
+is given by <m:math><m:mrow><m:msub><m:mo form="prefix">DFT</m:mo><m:mi>K</m:mi></m:msub><m:mo>⊗</m:mo><m:msub><m:mi>I</m:mi><m:mi>M</m:mi></m:msub></m:mrow></m:math>.</para>
+        <para id="id2264755">In step <link target-id="element-319"/>, each <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>M</m:mi></m:msup><m:mo>-</m:mo><m:msubsup><m:mi>W</m:mi><m:mi>K</m:mi><m:mi>i</m:mi></m:msubsup><m:mo>)</m:mo></m:mrow></m:mrow></m:math> is completely
+decomposed by its polynomial transform</para>
+        <equation id="id2264810">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mi>M</m:mi>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>i</m:mi>
+                <m:mo>,</m:mo>
+                <m:mi>K</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msub>
+                <m:mo form="prefix">DFT</m:mo>
+                <m:mi>M</m:mi>
+              </m:msub>
+              <m:mo>·</m:mo>
+              <m:msub>
+                <m:mo form="prefix">diag</m:mo>
+                <m:mrow>
+                  <m:mn>0</m:mn>
+                  <m:mo>≤</m:mo>
+                  <m:mi>i</m:mi>
+                  <m:mo>&lt;</m:mo>
+                  <m:mi>M</m:mi>
+                </m:mrow>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msubsup>
+                  <m:mi>W</m:mi>
+                  <m:mi>N</m:mi>
+                  <m:mrow>
+                    <m:mi>i</m:mi>
+                    <m:mi>j</m:mi>
+                  </m:mrow>
+                </m:msubsup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2264897">At this point, <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> is
+completely decomposed, but the spectrum is ordered according to
+<m:math><m:mrow><m:mi>j</m:mi><m:mi>K</m:mi><m:mo>+</m:mo><m:mi>i</m:mi></m:mrow></m:math>, <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>i</m:mi><m:mo>&lt;</m:mo><m:mi>M</m:mi></m:mrow></m:math>, <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>j</m:mi><m:mo>&lt;</m:mo><m:mi>K</m:mi></m:mrow></m:math> (<m:math><m:mi>j</m:mi></m:math> runs faster). The desired
+order is <m:math><m:mrow><m:mi>i</m:mi><m:mi>M</m:mi><m:mo>+</m:mo><m:mi>j</m:mi></m:mrow></m:math>.</para>
+        <para id="id2265024">Thus, in step <link target-id="element-149"/>, we need to apply the permutation <m:math><m:mrow><m:mi>j</m:mi><m:mi>K</m:mi><m:mo>+</m:mo><m:mi>i</m:mi><m:mo>↦</m:mo><m:mi>i</m:mi><m:mi>M</m:mi><m:mo>+</m:mo><m:mi>j</m:mi></m:mrow></m:math>, which is exactly the stride permutation <m:math><m:msubsup><m:mi>L</m:mi><m:mi>M</m:mi><m:mi>N</m:mi></m:msubsup></m:math>
+in <link target-id="uid21"/>.</para>
+        <para id="id2265080">In summary, we obtain the Cooley-Tukey decimation-in-frequency FFT with
+arbitrary radix:</para>
+        <equation id="id2265085"><m:math mode="display">
+            <m:mtable displaystyle="true">
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd/>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msubsup>
+                      <m:mi>L</m:mi>
+                      <m:mi>M</m:mi>
+                      <m:mi>N</m:mi>
+                    </m:msubsup>
+                    <m:mfenced separators="" open="(" close=")">
+                      <m:munder>
+                        <m:mo>⊕</m:mo>
+                        <m:mrow>
+                          <m:mn>0</m:mn>
+                          <m:mo>≤</m:mo>
+                          <m:mi>i</m:mi>
+                          <m:mo>&lt;</m:mo>
+                          <m:mi>K</m:mi>
+                        </m:mrow>
+                      </m:munder>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>·</m:mo>
+                      <m:msubsup>
+                        <m:mo form="prefix">diag</m:mo>
+                        <m:mrow>
+                          <m:mi>j</m:mi>
+                          <m:mo>=</m:mo>
+                          <m:mn>0</m:mn>
+                        </m:mrow>
+                        <m:mrow>
+                          <m:mi>M</m:mi>
+                          <m:mo>-</m:mo>
+                          <m:mn>1</m:mn>
+                        </m:mrow>
+                      </m:msubsup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:msubsup>
+                          <m:mi>W</m:mi>
+                          <m:mi>N</m:mi>
+                          <m:mrow>
+                            <m:mi>i</m:mi>
+                            <m:mi>j</m:mi>
+                          </m:mrow>
+                        </m:msubsup>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                    </m:mfenced>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>k</m:mi>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd/>
+                <m:mtd>
+                  <m:mo>=</m:mo>
+                </m:mtd>
+                <m:mtd columnalign="left">
+                  <m:mrow>
+                    <m:msubsup>
+                      <m:mi>L</m:mi>
+                      <m:mi>M</m:mi>
+                      <m:mi>N</m:mi>
+                    </m:msubsup>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>K</m:mi>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:msubsup>
+                      <m:mi>T</m:mi>
+                      <m:mi>M</m:mi>
+                      <m:mi>N</m:mi>
+                    </m:msubsup>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:msub>
+                        <m:mo form="prefix">DFT</m:mo>
+                        <m:mi>k</m:mi>
+                      </m:msub>
+                      <m:mo>⊗</m:mo>
+                      <m:msub>
+                        <m:mi>I</m:mi>
+                        <m:mi>M</m:mi>
+                      </m:msub>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mo>.</m:mo>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:math>
+        </equation>
+        <para id="id2265303">The matrix <m:math><m:msubsup><m:mi>T</m:mi><m:mi>M</m:mi><m:mi>N</m:mi></m:msubsup></m:math> is diagonal and usually called the
+<emphasis>twiddle matrix</emphasis>. Transposition using
+<link target-id="uid22"/> yields the corresponding decimation-in-time version:</para>
+        <equation id="id2265338">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mi>k</m:mi>
+                </m:msub>
+                <m:mo>⊗</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msubsup>
+                <m:mi>T</m:mi>
+                <m:mi>M</m:mi>
+                <m:mi>N</m:mi>
+              </m:msubsup>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>I</m:mi>
+                  <m:mi>K</m:mi>
+                </m:msub>
+                <m:mo>⊗</m:mo>
+                <m:msub>
+                  <m:mo form="prefix">DFT</m:mo>
+                  <m:mi>M</m:mi>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msubsup>
+                <m:mi>L</m:mi>
+                <m:mi>K</m:mi>
+                <m:mi>N</m:mi>
+              </m:msubsup>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+      </section>
+    </section>
+    <section id="uid27">
+      <title>Discussion and Further Reading</title>
+      <para id="id2265430">This chapter only scratches the surface of the connection between
+algebra and the DFT or signal processing in general. We provide
+a few references for further reading.</para>
+      <section id="uid28">
+        <title>Algebraic Derivation of Transform Algorithms</title>
+        <para id="id2265444">As mentioned before, the use of polynomial algebras and the CRT
+underlies much of the early work on FFTs and convolution algorithms
+<link target-id="bid3"/>, <link target-id="bid2"/>, <link target-id="bid5"/>. For example, Winograd's
+work on FFTs minimizes the number of non-rational multiplications.
+This and his work on complexity theory in general makes heavy use of
+polynomial algebras <link target-id="bid3"/>, <link target-id="bid4"/>, <link target-id="bid14"/> (see
+Chapter <link document="m16333">Winograd’s Short DFT Algorithms</link> for more information and references).
+See <link target-id="bid15"/> for a broad treatment of algebraic complexity
+theory.</para>
+        <para id="id2265495">Since <m:math><m:mrow><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>x</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>N</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:msub><m:mi>C</m:mi><m:mi>N</m:mi></m:msub><m:mo>]</m:mo></m:mrow></m:mrow></m:math> can be viewed a group algebra for the
+cyclic group, the methods shown in this chapter can be translated into
+the context of group representation theory. For example,
+<link target-id="bid16"/> derives the general-radix FFT using group theory
+and also uses already the Kronecker product formalism. So does Beth
+and started the area of FFTs for more general
+groups <link target-id="bid17"/>, <link target-id="bid18"/>. However, Fourier transforms for
+groups have found only sporadic applications <link target-id="bid19"/>.
+Along a related line of work, <link target-id="bid20"/> shows that using group
+theory it is possible that to discover and generate certain algorithms
+for trigonometric transforms, such as discrete cosine transforms
+(DCTs), automatically using a computer program.</para>
+        <para id="id2265599">More recently, the polynomial algebra framework was extended to
+include most trigonometric transforms used in signal processing
+<link target-id="bid7"/>, <link target-id="bid6"/>, namely, besides the DFT, the discrete cosine and sine transforms and various real DFTs including the discrete Hartley transform.
+It turns out that the same
+techniques shown in this chapter can then be applied to derive,
+explain, and classify most of the known algorithms for these
+transforms and even obtain a large class of new algorithms including
+general-radix algorithms for the discrete cosine and sine transforms
+(DCTs/DSTs) <link target-id="bid13"/>, <link target-id="bid9"/>, <link target-id="bid21"/>, <link target-id="bid21a"/>.</para>
+        <para id="id2265637">This latter line of work is part of the algebraic signal processing
+theory briefly discussed next.</para>
+      </section>
+      <section id="uid29">
+        <title>Algebraic Signal Processing Theory</title>
+        <para id="id2265650">The algebraic properties of transforms used in the above work on
+algorithm derivation hints at a connection between algebra and
+(linear) signal processing itself. This is indeed the case and was
+fully developed in a recent body of work called algebraic signal
+processing theory (ASP). The foundation of ASP is developed in <link target-id="bid6"/>, <link target-id="bid7"/>, <link target-id="bid8"/>.</para>
+        <para id="id2265675">ASP first identifies the algebraic structure of (linear) signal
+processing: the common assumptions on available operations for filters
+and signals make the set of filters an <emphasis>algebra</emphasis><m:math><m:mi mathvariant="script">A</m:mi></m:math> and the
+set of signals an associated <m:math><m:mi mathvariant="script">A</m:mi></m:math>-module
+ <m:math><m:mi mathvariant="script">M</m:mi></m:math>. ASP then
+builds a signal processing theory formally from the axiomatic
+definition of a <emphasis>signal model</emphasis>: a triple <m:math><m:mrow><m:mo>(</m:mo><m:mi mathvariant="script">A</m:mi><m:mo>,</m:mo><m:mi mathvariant="script">M</m:mi><m:mo>,</m:mo><m:mi>Φ</m:mi><m:mo>)</m:mo></m:mrow></m:math>, where
+<m:math><m:mi>Φ</m:mi></m:math> generalizes the idea of the <m:math><m:mi>z</m:mi></m:math>-transform to mappings from
+vector spaces of signal values to <m:math><m:mi mathvariant="script">M</m:mi></m:math>. If a signal model is given,
+other concepts, such as spectrum, Fourier transform, frequency
+response are automatically defined but take different forms for
+different models. For example, infinite and finite time as discussed
+in <link target-id="element-748"/> are two examples of signal models. Their
+complete definition is provided in <link target-id="uid30"/> and
+identifies the proper notion of a finite <m:math><m:mi>z</m:mi></m:math>-transform as a mapping
+<m:math><m:mrow><m:msup><m:mrow><m:mi mathvariant="double-struck">C</m:mi></m:mrow><m:mi>n</m:mi></m:msup><m:mo>→</m:mo><m:mi mathvariant="double-struck">C</m:mi><m:mrow><m:mo>[</m:mo><m:mi>s</m:mi><m:mo>]</m:mo></m:mrow><m:mo>/</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>s</m:mi><m:mi>n</m:mi></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.</para>
+        <table id="uid30" summary="This table contains five rows and three columns. The first row is a header, categorizing the entries below it into one column relating to infinite time, and a second relating to finite time. The first column labels the rows with different signal models. The last row links to equations in which the entries of the tables are defined.">
+<tgroup cols="3"><tbody>
+              <row>
+                <entry>Signal model</entry>
+                <entry>Infinite time</entry>
+                <entry>Finite time</entry>
+              </row>
+              <row>
+                <entry>
+                  <m:math>
+                    <m:mi mathvariant="script">A</m:mi>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mfenced separators="" open="{" close="}">
+                      <m:mstyle scriptlevel="0" displaystyle="true">
+                        <m:munder>
+                          <m:mo>∑</m:mo>
+                          <m:mrow>
+                            <m:mi>n</m:mi>
+                            <m:mo>∈</m:mo>
+                            <m:mi mathvariant="double-struck">Z</m:mi>
+                          </m:mrow>
+                        </m:munder>
+                        <m:mi>H</m:mi>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi>n</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:msup>
+                          <m:mi>s</m:mi>
+                          <m:mi>n</m:mi>
+                        </m:msup>
+                        <m:mo>∣</m:mo>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mo>⋯</m:mo>
+                          <m:mo>,</m:mo>
+                          <m:mi>H</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mo>-</m:mo>
+                            <m:mn>1</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mi>H</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mn>0</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mi>H</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mn>1</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mo>⋯</m:mo>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:mo>∈</m:mo>
+                        <m:msup>
+                          <m:mi>ℓ</m:mi>
+                          <m:mn>1</m:mn>
+                        </m:msup>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi mathvariant="double-struck">Z</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                      </m:mstyle>
+                    </m:mfenced>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi mathvariant="double-struck">C</m:mi>
+                      <m:mrow>
+                        <m:mo>[</m:mo>
+                        <m:mi>x</m:mi>
+                        <m:mo>]</m:mo>
+                      </m:mrow>
+                      <m:mo>/</m:mo>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:msup>
+                          <m:mi>s</m:mi>
+                          <m:mi>n</m:mi>
+                        </m:msup>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>
+                  <m:math>
+                    <m:mi mathvariant="script">M</m:mi>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mfenced separators="" open="{" close="}">
+                      <m:mstyle scriptlevel="0" displaystyle="true">
+                        <m:munder>
+                          <m:mo>∑</m:mo>
+                          <m:mrow>
+                            <m:mi>n</m:mi>
+                            <m:mo>∈</m:mo>
+                            <m:mi mathvariant="double-struck">Z</m:mi>
+                          </m:mrow>
+                        </m:munder>
+                        <m:mi>X</m:mi>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi>n</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:msup>
+                          <m:mi>s</m:mi>
+                          <m:mi>n</m:mi>
+                        </m:msup>
+                        <m:mo>∣</m:mo>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mo>⋯</m:mo>
+                          <m:mo>,</m:mo>
+                          <m:mi>X</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mo>-</m:mo>
+                            <m:mn>1</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mi>X</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mn>0</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mi>X</m:mi>
+                          <m:mrow>
+                            <m:mo>(</m:mo>
+                            <m:mn>1</m:mn>
+                            <m:mo>)</m:mo>
+                          </m:mrow>
+                          <m:mo>,</m:mo>
+                          <m:mo>⋯</m:mo>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:mo>∈</m:mo>
+                        <m:msup>
+                          <m:mi>ℓ</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msup>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi mathvariant="double-struck">Z</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                      </m:mstyle>
+                    </m:mfenced>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi mathvariant="double-struck">C</m:mi>
+                      <m:mrow>
+                        <m:mo>[</m:mo>
+                        <m:mi>s</m:mi>
+                        <m:mo>]</m:mo>
+                      </m:mrow>
+                      <m:mo>/</m:mo>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:msup>
+                          <m:mi>s</m:mi>
+                          <m:mi>n</m:mi>
+                        </m:msup>
+                        <m:mo>-</m:mo>
+                        <m:mn>1</m:mn>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>
+                  <m:math>
+                    <m:mi>Φ</m:mi>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>Φ</m:mi>
+                      <m:mo>:</m:mo>
+                      <m:mspace width="4pt"/>
+                      <m:msup>
+                        <m:mi>ℓ</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mrow>
+                        <m:mo>(</m:mo>
+                        <m:mi mathvariant="double-struck">Z</m:mi>
+                        <m:mo>)</m:mo>
+                      </m:mrow>
+                      <m:mo>→</m:mo>
+                      <m:mi mathvariant="script">M</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>Φ</m:mi>
+                      <m:mo>:</m:mo>
+                      <m:mspace width="4pt"/>
+                      <m:msup>
+                        <m:mrow>
+                          <m:mi mathvariant="double-struck">C</m:mi>
+                        </m:mrow>
+                        <m:mi>n</m:mi>
+                      </m:msup>
+                      <m:mo>→</m:mo>
+                      <m:mi mathvariant="script">M</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry/>
+                <entry>defined in <link target-id="uid1"/></entry>
+                <entry>defined in <link target-id="uid4"/></entry>
+              </row>
+            </tbody>
+          
+
+</tgroup><caption>Infinite and finite time models as defined in ASP. </caption>
+</table>
+        <para id="id2266408">ASP shows that many signal models are in principle possible, each with
+its own notion of filtering and Fourier transform. Those that support
+shift-invariance have commutative algebras. Since finite-dimensional
+commutative algebras are precisely polynomial algebras, their
+appearance in signal processing is explained. For example, ASP
+identifies the polynomial algebras underlying the DCTs and DSTs, which
+hence become Fourier transforms in the ASP sense. The signal models
+are called finite <emphasis>space</emphasis> models since they support signal
+processing based on an undirected shift operator, different from the
+directed time shift. Many more insights are provided by ASP including
+the need for and choices in choosing boundary conditions, properties
+of transforms, techniques for deriving new signal models, and the
+concise derivation of algorithms mentioned before.</para>
+      </section>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid5">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Auslander, L. and Feig, E. and Winograd, S.</bib:author>
+        <bib:title>Abelian Semi-simple Algebras and Algorithms for the Discrete Fourier Transform</bib:title>
+        <bib:journal>Advances in Applied Mathematics</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>5</bib:volume>
+        <bib:number/>
+        <bib:pages>31–55</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Bürgisser, P. and Clausen, M. and Shokrollahi, M. A.</bib:author>
+        <bib:title>Algebraic Complexity Theory</bib:title>
+        <bib:publisher>Springer</bib:publisher>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Beth, Th.</bib:author>
+        <bib:title>Verfahren der Schnellen Fouriertransformation [Fast Fourier Transform Methods]</bib:title>
+        <bib:publisher>Teubner</bib:publisher>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Britanak, V. and Rao, K. R.</bib:author>
+        <bib:title>The fast generalized discrete Fourier transforms: A unified approach to the discrete sinusoidal transforms computation</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume>79</bib:volume>
+        <bib:number/>
+        <bib:pages>135–150</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Egner, S. and Püschel, M.</bib:author>
+        <bib:title>Automatic Generation of Fast Discrete Signal Transforms</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2001</bib:year>
+<!--optional fields-->
+        <bib:volume>49</bib:volume>
+        <bib:number>9</bib:number>
+        <bib:pages>1992–2002</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Fuhrman, Paul A.</bib:author>
+        <bib:title>A Polynomial Approach to Linear Algebra</bib:title>
+        <bib:publisher>Springer Verlag</bib:publisher>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Maslen, D. and Rockmore, D.</bib:author>
+        <bib:title>Generalized FFTs – A survey of some recent results</bib:title>
+        <bib:booktitle>Proceedings of IMACS Workshop in Groups and Computation</bib:booktitle>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>28</bib:volume>
+        <bib:series/>
+        <bib:pages>182–238</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Nicholson, P. J.</bib:author>
+        <bib:title>Algebraic Theory of Finite Fourier Transforms</bib:title>
+        <bib:journal>Journal of Computer and System Sciences</bib:journal>
+        <bib:year>1971</bib:year>
+<!--optional fields-->
+        <bib:volume>5</bib:volume>
+        <bib:number/>
+        <bib:pages>524–547</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Nussbaumer, H. J.</bib:author>
+        <bib:title>Fast Fourier Transformation and Convolution Algorithms</bib:title>
+        <bib:publisher>Springer</bib:publisher>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition>2nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W. and Buck, J. R.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition>2nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Püschel, M. and Moura, J. M. F.</bib:author>
+        <bib:title>Algebraic Signal Processing Theory</bib:title>
+        <bib:howpublished/>
+        <bib:month/>
+        <bib:year/>
+        <bib:note>available at http://arxiv.org/abs/cs.IT/0612077</bib:note>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Püschel, M. and Moura, J. M. F.</bib:author>
+        <bib:title>Algebraic Signal Processing Theory: Cooley-Tukey Type Algorithms for DCTs and DSTs</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2008</bib:year>
+        <bib:volume>56</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>1502-1521</bib:pages>
+<!--optional fields-->
+        <bib:month/>
+        <bib:note>a longer version is available at http://arxiv.org/abs/cs.IT/0702025</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:article>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Püschel, M. and Moura, J. M. F.</bib:author>
+        <bib:title>Algebraic Signal Processing Theory: Foundation and 1-D Time</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2008</bib:year>
+        <bib:volume>56</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>3572-3585</bib:pages>
+        <bib:month/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:article>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Püschel, M. and Moura, J. M. F.</bib:author>
+        <bib:title>Algebraic Signal Processing Theory: 1-D Space</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2008</bib:year>
+        <bib:volume>56</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>3586-3599</bib:pages>
+        <bib:month/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Püschel, M. and Moura, J. M. F.</bib:author>
+        <bib:title>The Algebraic Approach to the Discrete Cosine and Sine Transforms and their Fast Algorithms</bib:title>
+        <bib:journal>SIAM Journal of Computing</bib:journal>
+        <bib:year>2003</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1280–1316</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Rockmore, D.</bib:author>
+        <bib:title>Some applications of generalized FFT's</bib:title>
+        <bib:booktitle>Proceedings of DIMACS Workshop in Groups and Computation</bib:booktitle>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>28</bib:volume>
+        <bib:series/>
+        <bib:pages>329–370</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Tolimieri, R. and An, M. and Lu, C.</bib:author>
+        <bib:title>Algorithms for Discrete Fourier Transforms and Convolution</bib:title>
+        <bib:publisher>Springer</bib:publisher>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition>2nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Van Loan, C.</bib:author>
+        <bib:title>Computational Framework of the Fast Fourier Transform</bib:title>
+        <bib:publisher>Siam</bib:publisher>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+
+    <bib:entry id="bid21">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Voronenko, Y. and Püschel, M.</bib:author>
+        <bib:title>Algebraic derivation of general radix Cooley-Tukey algorithms for the real discrete Fourier transform</bib:title>
+        <bib:booktitle>Proc. International Conference on Acoustics, Speech, and Signal Processing (ICASSP)</bib:booktitle>
+        <bib:year>2006</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>876-879</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+
+    <bib:entry id="bid21a">
+      <bib:article>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Voronenko, Y. and Püschel, M.</bib:author>
+        <bib:title>Algebraic Signal Processing Theory: Cooley-Tukey Type Algorithms for Real DFTs</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year/>
+        <bib:volume/>
+        <bib:number/>
+        <bib:pages/>
+        <bib:month/>
+        <bib:note>to appear</bib:note>
+      </bib:article>
+    </bib:entry>
+
+    <bib:entry id="bid3">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Mathematics of Computation</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number/>
+        <bib:pages>175–199</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On the Multiplicative Complexity of the Discrete Fourier Transform</bib:title>
+        <bib:journal>Advances in Mathematics</bib:journal>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number/>
+        <bib:pages>83–117</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>Arithmetic Complexity of Computation</bib:title>
+        <bib:publisher>Siam</bib:publisher>
+        <bib:year>1980</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+  </bib:file>
+</document>

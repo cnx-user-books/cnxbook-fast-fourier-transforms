@@ -1,0 +1,2610 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Implementing FFTs in Practice</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+  <md:content-id>m16336</md:content-id>
+  <md:title>Implementing FFTs in Practice</md:title>
+  <md:abstract>Discussion of the considerations involved in high-performance FFT implementations, which center largely on memory access and other non-arithmetic concerns, as illustrated by a case study of the FFTW library.</md:abstract>
+  <md:uuid>ba55ed41-b37b-45bd-89c9-e6b67725401e</md:uuid>
+</metadata>
+
+<content>
+    <para id="element-831">by Steven G. Johnson (Department of Mathematics, Massachusetts Institute of Technology) and Matteo Frigo (Cilk Arts, Inc.) </para><section id="uid1">
+      <title>Introduction</title>
+      <para id="id2255555">Although there are a wide range of fast Fourier transform (FFT)
+algorithms, involving a wealth of mathematics from number theory to
+polynomial algebras, the vast majority of FFT implementations in
+practice employ some variation on the Cooley-Tukey
+algorithm <link target-id="bid0"/>. The Cooley-Tukey algorithm can be
+derived in two or three lines of elementary algebra. It can be
+implemented almost as easily, especially if only power-of-two sizes
+are desired; numerous popular textbooks list short FFT subroutines
+for power-of-two sizes, written in the language <foreign>du jour</foreign>. The
+implementation of the Cooley-Tukey algorithm, at least, would
+therefore seem to be a long-solved problem. In this chapter, however,
+we will argue that matters are not as straightforward as they might
+appear.</para>
+      <para id="id2255586">For many years, the primary route to improving upon the Cooley-Tukey
+FFT seemed to be reductions in the count of arithmetic operations,
+which often dominated the execution time prior to the ubiquity of fast
+floating-point hardware (at least on non-embedded processors). Therefore, great effort was expended towards
+finding new algorithms with reduced arithmetic
+counts <link target-id="bid1"/>, from Winograd's method to achieve
+<m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> multiplications<footnote id="id10165712">We employ the standard asymptotic
+notation of <m:math><m:mi>O</m:mi></m:math> for asymptotic upper bounds, <m:math><m:mi>Θ</m:mi></m:math> for asymptotic
+tight bounds, and <m:math><m:mi>Ω</m:mi></m:math> for asymptotic lower
+bounds <link target-id="bid2"/>.</footnote> (at the cost of many more
+additions) <link target-id="bid3"/>, <link target-id="bid4"/>, <link target-id="bid5"/>, <link target-id="bid1"/> to the
+split-radix variant on Cooley-Tukey that long achieved the lowest
+known total count of additions and multiplications for power-of-two
+sizes <link target-id="bid6"/>, <link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>, <link target-id="bid1"/> (but
+was recently improved upon <link target-id="bid10"/>, <link target-id="bid11"/>). The question of
+the minimum possible arithmetic count continues to be of fundamental
+theoretical interest—it is not even known whether better than
+<m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> complexity is possible, since <m:math><m:mrow><m:mi>Ω</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+lower bounds on the count of additions have only been proven subject
+to restrictive assumptions about the
+algorithms <link target-id="bid12"/>, <link target-id="bid13"/>, <link target-id="bid14"/>. Nevertheless,
+the difference in the number of arithmetic operations, for
+power-of-two sizes <m:math><m:mi>n</m:mi></m:math>, between the 1965 radix-2 Cooley-Tukey
+algorithm (<m:math><m:mrow><m:mo>∼</m:mo><m:mn>5</m:mn><m:mi>n</m:mi><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi></m:mrow></m:math> <link target-id="bid0"/>) and the currently
+lowest-known arithmetic count (<m:math><m:mrow><m:mo>∼</m:mo><m:mfrac><m:mn>34</m:mn><m:mn>9</m:mn></m:mfrac><m:mi>n</m:mi><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi></m:mrow></m:math> <link target-id="bid10"/>, <link target-id="bid11"/>) remains only about 25%.</para>
+      <figure id="uid3" orient="horizontal"><media id="id10370302" alt="log (n) base 2 on the horizontal axis, and FFTW speed/numerical recipes speed on the vertical axis. Two curves move horizontally from value 3 to value 18, where they begin increasing. One curve, labeled, without SSE, is lower in vertical value than the second curve, with SSE (SIMD instructions)."><image src="../../media/fftwnr.png" mime-type="image/png" width="672" print-width="3in"/></media><caption>The ratio of speed (1/time) between a highly optimized FFT
+(FFTW 3.1.2 <link target-id="bid15"/>, <link target-id="bid16"/>) and a typical textbook radix-2
+implementation (<cite><cite-title>Numerical Recipes in C</cite-title></cite> <link target-id="bid17"/>) on a 3 GHz Intel
+Core Duo with the Intel C compiler 9.1.043, for single-precision
+complex-data DFTs of size <m:math><m:mi>n</m:mi></m:math>, plotted versus <m:math><m:mrow><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi></m:mrow></m:math>. Top line
+(squares) shows FFTW with SSE SIMD instructions enabled, which
+perform multiple arithmetic operations at once (see section <!--references within titles or captions is not allowed.-->);
+bottom line (circles) shows FFTW with SSE disabled, which thus
+requires a similar number of arithmetic instructions to the textbook
+code. (This is not intended as a criticism of <cite><cite-title>Numerical
+Recipes</cite-title></cite>—simple radix-2 implementations are reasonable for
+pedagogy—but it illustrates the radical differences between
+straightforward and optimized implementations of FFT algorithms,
+even with similar arithmetic costs.) For <m:math><m:mrow><m:mi>n</m:mi><m:mo>≳</m:mo><m:msup><m:mn>2</m:mn><m:mn>19</m:mn></m:msup></m:mrow></m:math>, the
+ratio increases because the textbook code becomes much slower (this
+happens when the DFT size exceeds the level-2 cache).</caption></figure>
+      <para id="id2256001">And yet there is a vast gap between this basic mathematical theory and
+the actual practice—highly optimized FFT packages are often an
+order of magnitude faster than the textbook subroutines, and the
+internal structure to achieve this performance is radically different
+from the typical textbook presentation of the “same” Cooley-Tukey
+algorithm. For example, <link target-id="uid3"/> plots the ratio of benchmark
+speeds between a highly optimized FFT <link target-id="bid15"/>, <link target-id="bid16"/> and a
+typical textbook radix-2 implementation <link target-id="bid17"/>, and the
+former is faster by a factor of 5–40 (with a larger ratio as <m:math><m:mi>n</m:mi></m:math>
+grows). Here, we will consider some of the reasons for this
+discrepancy, and some techniques that can be used to address the
+difficulties faced by a practical high-performance FFT
+implementation.<footnote id="id10193163">We won't address the question of
+parallelization on multi-processor machines, which adds even greater
+difficulty to FFT implementation—although multi-processors are
+increasingly important, achieving good serial performance is a basic
+prerequisite for optimized parallel code, and is already hard enough!</footnote></para>
+      <para id="id2256072">In particular, in this chapter we will discuss some of the lessons
+learned and the strategies adopted in the FFTW library. FFTW <link target-id="bid15"/>, <link target-id="bid16"/> is a widely used free-software library that computes the
+discrete Fourier transform (DFT) and its various special cases.
+Its performance is competitive even with manufacturer-optimized programs <link target-id="bid16"/>,
+and this performance is <emphasis>portable</emphasis> thanks the structure of the
+algorithms employed, self-optimization techniques, and highly
+optimized kernels (FFTW's <emphasis>codelets</emphasis>) generated by a
+special-purpose compiler.</para>
+      <para id="id2256115">This chapter is structured as follows. First <link target-id="uid5">"Review of the Cooley-Tukey FFT"</link>, we
+briefly review the basic ideas behind the Cooley-Tukey algorithm and
+define some common terminology, especially focusing on the many
+degrees of freedom that the abstract algorithm allows to
+implementations. Next, in <link target-id="uid47">"Goals and Background of the FFTW Project"</link>, we provide some context for FFTW's development and stress that performance, while it receives the most publicity, is not necessarily the most important consideration in the implementation of a library of this sort. Third, in <link target-id="uid9">"FFTs and the Memory Hierarchy"</link>, we consider a basic
+theoretical model of the computer memory hierarchy and its impact on
+FFT algorithm choices: quite general considerations push
+implementations towards large radices and explicitly recursive
+structure. Unfortunately, general considerations are not sufficient
+in themselves, so we will explain in <link target-id="uid24">"Adaptive Composition of FFT Algorithms"</link> how FFTW
+self-optimizes for particular machines by selecting its algorithm at
+runtime from a composition of simple algorithmic steps. Furthermore,
+<link target-id="uid41">"Generating Small FFT Kernels"</link> describes the utility and the principles of automatic
+code generation used to produce the highly optimized building blocks
+of this composition, FFTW's codelets. Finally, we will
+briefly consider an important non-performance issue, in
+<link target-id="uid45">"Numerical Accuracy in FFTs"</link>.</para>
+    </section>
+    <section id="uid5">
+      <title>Review of the Cooley-Tukey FFT</title>
+      <para id="id2256190">The (forward, one-dimensional)
+discrete Fourier transform (DFT) of an array <m:math><m:mi mathvariant="bold">X</m:mi></m:math> of <m:math><m:mi>n</m:mi></m:math> complex numbers is
+the array <m:math><m:mi mathvariant="bold">Y</m:mi></m:math> given by</para>
+      <equation id="uid6">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi mathvariant="bold">Y</m:mi>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+              <m:mo>∑</m:mo>
+              <m:mrow>
+                <m:mi>ℓ</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi mathvariant="bold">X</m:mi>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:mi>ℓ</m:mi>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:msubsup>
+              <m:mi>ω</m:mi>
+              <m:mi>n</m:mi>
+              <m:mrow>
+                <m:mi>ℓ</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:mo>,</m:mo>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256545">where <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>k</m:mi><m:mo>&lt;</m:mo><m:mi>n</m:mi></m:mrow></m:math> and <m:math><m:mrow><m:msub><m:mi>ω</m:mi><m:mi>n</m:mi></m:msub><m:mo>=</m:mo><m:mo form="prefix">exp</m:mo><m:mrow><m:mo>(</m:mo><m:mo>-</m:mo><m:mn>2</m:mn><m:mi>π</m:mi><m:mi>i</m:mi><m:mo>/</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math> is a
+primitive root of unity. Implemented directly, <link target-id="uid6"/> would
+require <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>)</m:mo></m:mrow></m:math> operations; fast Fourier transforms are <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> algorithms to compute the same result. The most important
+FFT (and the one primarily used in FFTW) is known as the
+“Cooley-Tukey” algorithm, after the two authors who rediscovered and
+popularized it in 1965 <link target-id="bid0"/>, although it had been
+previously known as early as 1805 by Gauss as well as by later
+re-inventors <link target-id="bid18"/>. The basic idea behind this FFT is
+that a DFT of a composite size <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> can be re-expressed in
+terms of smaller DFTs of sizes <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> and <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math>—essentially, as a
+two-dimensional DFT of size <m:math><m:mrow><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>×</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> where the output is
+<emphasis>transposed</emphasis>. The choices of factorizations of <m:math><m:mi>n</m:mi></m:math>, combined
+with the many different ways to implement the data re-orderings of the
+transpositions, have led to numerous implementation strategies for the
+Cooley-Tukey FFT, with many variants distinguished by their own
+names <link target-id="bid1"/>, <link target-id="bid19"/>. FFTW implements a space of
+<emphasis>many</emphasis> such variants, as described in <link target-id="uid24">"Adaptive Composition of FFT Algorithms"</link>, but here
+we derive the basic algorithm, identify its key features, and outline
+some important historical variations and their relation to FFTW.</para>
+      <para id="id2256808">The Cooley-Tukey algorithm can be derived as follows. If <m:math><m:mi>n</m:mi></m:math> can be
+factored into <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math>, <link target-id="uid6"/> can be rewritten by
+letting <m:math><m:mrow><m:mi>ℓ</m:mi><m:mo>=</m:mo><m:msub><m:mi>ℓ</m:mi><m:mn>1</m:mn></m:msub><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>+</m:mo><m:msub><m:mi>ℓ</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> and <m:math><m:mrow><m:mi>k</m:mi><m:mo>=</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>+</m:mo><m:msub><m:mi>k</m:mi><m:mn>2</m:mn></m:msub><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math>. We then have:
+</para>
+      <equation id="uid7">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi mathvariant="bold">Y</m:mi>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+              <m:mo>∑</m:mo>
+              <m:mrow>
+                <m:msub>
+                  <m:mi>ℓ</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mfenced separators="" open="(" close=")">
+                <m:munderover>
+                  <m:mo>∑</m:mo>
+                  <m:mrow>
+                    <m:msub>
+                      <m:mi>ℓ</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:mo>=</m:mo>
+                    <m:mn>0</m:mn>
+                  </m:mrow>
+                  <m:mrow>
+                    <m:msub>
+                      <m:mi>n</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:mo>-</m:mo>
+                    <m:mn>1</m:mn>
+                  </m:mrow>
+                </m:munderover>
+                <m:mi mathvariant="bold">X</m:mi>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:msub>
+                    <m:mi>ℓ</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>n</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>+</m:mo>
+                  <m:msub>
+                    <m:mi>ℓ</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:msubsup>
+                  <m:mi>ω</m:mi>
+                  <m:mrow>
+                    <m:msub>
+                      <m:mi>n</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                  </m:mrow>
+                  <m:mrow>
+                    <m:msub>
+                      <m:mi>ℓ</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                    <m:msub>
+                      <m:mi>k</m:mi>
+                      <m:mn>1</m:mn>
+                    </m:msub>
+                  </m:mrow>
+                </m:msubsup>
+              </m:mfenced>
+              <m:msubsup>
+                <m:mi>ω</m:mi>
+                <m:mrow>
+                  <m:mi>n</m:mi>
+                </m:mrow>
+                <m:mrow>
+                  <m:msub>
+                    <m:mi>ℓ</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msub>
+                  <m:msub>
+                    <m:mi>k</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msub>
+                </m:mrow>
+              </m:msubsup>
+            </m:mfenced>
+            <m:msubsup>
+              <m:mi>ω</m:mi>
+              <m:mrow>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+              </m:mrow>
+              <m:mrow>
+                <m:msub>
+                  <m:mi>ℓ</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+              </m:mrow>
+            </m:msubsup>
+            <m:mspace width="4pt"/>
+            <m:mo>,</m:mo>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257192">where <m:math><m:mrow><m:msub><m:mi>k</m:mi><m:mrow><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>2</m:mn></m:mrow></m:msub><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mrow><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>2</m:mn></m:mrow></m:msub><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>. Thus, the algorithm computes
+<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> DFTs of size <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> (the inner sum), multiplies the result by
+the so-called <link target-id="bid20"/> <term>twiddle factors</term> <m:math><m:msubsup><m:mi>ω</m:mi><m:mrow><m:mi>n</m:mi></m:mrow><m:mrow><m:msub><m:mi>ℓ</m:mi><m:mn>2</m:mn></m:msub><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:msubsup></m:math>, and finally computes <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> DFTs of size
+<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> (the outer sum). This decomposition is then continued
+recursively. The literature uses the term <term>radix</term> to describe
+an <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> or <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> that is bounded (often constant); the small DFT
+of the radix is traditionally called a <term>butterfly</term>.</para>
+      <para id="id2257388">Many well-known variations are distinguished by the radix alone. A
+<term>decimation in time</term> (<term>DIT</term>) algorithm uses <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> as
+the radix, while a <term>decimation in frequency</term> (<term>DIF</term>)
+algorithm uses <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> as the radix. If multiple radices are used,
+e.g. for <m:math><m:mi>n</m:mi></m:math> composite but not a prime power, the algorithm is called
+<term>mixed radix</term>. A peculiar blending of radix 2 and 4 is called
+<term>split radix</term>, which was proposed to minimize the count of
+arithmetic
+operations <link target-id="bid6"/>, <link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>, <link target-id="bid1"/>
+although it has been superseded in this
+regard <link target-id="bid10"/>, <link target-id="bid11"/>. FFTW implements both DIT and
+DIF, is mixed-radix with radices that are <emphasis>adapted</emphasis> to the
+hardware, and often uses much larger radices (e.g. radix 32) than were
+once common. On the other end of the scale, a “radix” of roughly
+<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> has been called a <term>four-step</term> FFT algorithm (or
+<term>six-step</term>, depending on how many transposes one
+performs) <link target-id="bid21"/>; see <link target-id="uid9">"FFTs and the Memory Hierarchy"</link> for some theoretical and
+practical discussion of this algorithm.</para>
+      <para id="id2257553">A key difficulty in implementing the Cooley-Tukey FFT is that the
+<m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> dimension corresponds to discontiguous inputs <m:math><m:msub><m:mi>ℓ</m:mi><m:mn>1</m:mn></m:msub></m:math> in <m:math><m:mi mathvariant="bold">X</m:mi></m:math> but
+contiguous outputs <m:math><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub></m:math> in <m:math><m:mi mathvariant="bold">Y</m:mi></m:math>, and vice-versa for <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math>. This is a
+matrix transpose for a single decomposition stage, and the composition
+of all such transpositions is a (mixed-base) digit-reversal
+permutation (or <term>bit-reversal</term>, for radix 2). The resulting
+necessity of discontiguous memory access and data re-ordering hinders
+efficient use of hierarchical memory architectures (e.g., caches), so
+that the optimal execution order of an FFT for given hardware is
+non-obvious, and various approaches have been proposed.</para>
+      <figure id="uid8" orient="horizontal"><media id="id10422619" alt="Two diagrams. Both are a chart showing a large circle labeled 8, then divided into two circles labeled 4, which are each divided into two circles labeled 2. The diagram on the left, labeled breadth-first, highlights the two circles labeled 4 in white. The diagram on the right, labeled depth-first, highlights one circle labeled 4 and one labeled 2."><image src="../../media/breadthdepth.png" mime-type="image/png" width="362" print-width="3in"/></media>
+   <caption>Schematic of traditional breadth-first (left) vs. recursive
+depth-first (right) ordering for radix-2 FFT of size 8: the
+computations for each nested box are completed before doing anything else in the
+surrounding box. Breadth-first computation performs all butterflies
+of a given size at once, while depth-first computation completes one
+subtransform entirely before moving on to the next (as in the
+algorithm below).</caption></figure>
+      <para id="id2257683">One ordering distinction is between recursion and iteration. As
+expressed above, the Cooley-Tukey algorithm could be thought of as
+defining a tree of smaller and smaller DFTs, as depicted in <link target-id="uid8"/>;
+for example, a textbook radix-2 algorithm would divide size <m:math><m:mi>n</m:mi></m:math> into
+two transforms of size <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math>, which are divided into four transforms
+of size <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>4</m:mn></m:mrow></m:math>, and so on until a base case is reached (in principle,
+size 1). This might naturally suggest a recursive implementation in
+which the tree is traversed “depth-first” as in <link target-id="uid8"/>(right) and the
+algorithm of <link target-id="element-948"/>—one size <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> transform is solved completely
+before processing the other one, and so on. However, most traditional
+FFT implementations are non-recursive (with rare
+exceptions <link target-id="bid22"/>) and traverse the tree
+“breadth-first” <link target-id="bid19"/> as in <link target-id="uid8"/>(left)—in the radix-2
+example, they would perform <m:math><m:mi>n</m:mi></m:math> (trivial) size-1 transforms, then
+<m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> combinations into size-2 transforms, then <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>4</m:mn></m:mrow></m:math> combinations
+into size-4 transforms, and so on, thus making <m:math><m:mrow><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi></m:mrow></m:math> passes over
+the whole array. In contrast, as we discuss in
+<link target-id="uid38">"Discussion"</link>, FFTW employs an explicitly
+recursive strategy that encompasses <emphasis>both</emphasis> depth-first and
+breadth-first styles, favoring the former since it has some
+theoretical and practical advantages as discussed in <link target-id="uid9">"FFTs and the Memory Hierarchy"</link>.</para>
+
+ <code id="element-948" display="block" class="listing"><m:math><m:mrow><m:mi mathvariant="bold">Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:mi>n</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>]</m:mo><m:mo>←</m:mo><m:mo form="prefix">recfft</m:mo> <m:mn>2</m:mn><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>)</m:mo></m:mrow></m:math>:
+IF n=1 THEN
+     <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo><m:mo>←</m:mo><m:mi>X</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math>
+ELSE
+     <m:math><m:mrow><m:mi mathvariant="bold">Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>]</m:mo><m:mo>←</m:mo><m:mo form="prefix">recfft2</m:mo><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mn>2</m:mn><m:mi>ι</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+     <m:math><m:mrow><m:mi mathvariant="bold">Y</m:mi><m:mo>[</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:mi>n</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>]</m:mo><m:mo>←</m:mo><m:mo form="prefix">recfft2</m:mo><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>+</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mn>2</m:mn><m:mi>ι</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+     FOR <m:math><m:mrow><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math> TO <m:math><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>)</m:mo><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math> DO
+          <m:math><m:mrow><m:mi>t</m:mi><m:mo>←</m:mo><m:mi mathvariant="bold">Y</m:mi><m:mo>[</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>]</m:mo></m:mrow></m:math>
+          <m:math><m:mrow><m:mi mathvariant="bold">Y</m:mi><m:mrow><m:mo>[</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>]</m:mo></m:mrow><m:mo>←</m:mo><m:mi>t</m:mi><m:mo>+</m:mo><m:msubsup><m:mi>ω</m:mi><m:mi>n</m:mi><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub></m:msubsup><m:mi mathvariant="bold">Y</m:mi><m:mrow><m:mo>[</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>+</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>]</m:mo></m:mrow></m:mrow></m:math>
+          <m:math><m:mrow><m:mi mathvariant="bold">Y</m:mi><m:mrow><m:mo>[</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>+</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>]</m:mo></m:mrow><m:mo>←</m:mo><m:mi>t</m:mi><m:mo>-</m:mo><m:msubsup><m:mi>ω</m:mi><m:mi>n</m:mi><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub></m:msubsup><m:mi mathvariant="bold">Y</m:mi><m:mrow><m:mo>[</m:mo><m:msub><m:mi>k</m:mi><m:mn>1</m:mn></m:msub><m:mo>+</m:mo><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>]</m:mo></m:mrow></m:mrow></m:math>
+     END FOR
+END IF<caption>A depth-first recursive radix-2 DIT Cooley-Tukey FFT to
+compute a DFT of a power-of-two size <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mi>m</m:mi></m:msup></m:mrow></m:math>. The input is an array
+<m:math><m:mi mathvariant="bold">X</m:mi></m:math> of length <m:math><m:mi>n</m:mi></m:math> with stride <m:math><m:mi>ι</m:mi></m:math> (i.e., the inputs are <m:math><m:mrow><m:mi mathvariant="bold">X</m:mi><m:mo>[</m:mo><m:mi>ℓ</m:mi><m:mi>ι</m:mi><m:mo>]</m:mo></m:mrow></m:math>
+for <m:math><m:mrow><m:mi>ℓ</m:mi><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:mi>n</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>) and the output is an array <m:math><m:mi mathvariant="bold">Y</m:mi></m:math> of length <m:math><m:mi>n</m:mi></m:math> (with
+stride 1), containing the DFT of <m:math><m:mi mathvariant="bold">X</m:mi></m:math> [Equation 1]. <m:math><m:mrow><m:mi mathvariant="bold">X</m:mi><m:mo>+</m:mo><m:mi>ι</m:mi></m:mrow></m:math>
+denotes the array beginning with <m:math><m:mrow><m:mi mathvariant="bold">X</m:mi><m:mo>[</m:mo><m:mi>ι</m:mi><m:mo>]</m:mo></m:mrow></m:math>. This algorithm operates
+out-of-place, produces in-order output, and does not require a
+separate bit-reversal stage.</caption></code>
+
+      <para id="id2257873">A second ordering distinction lies in how the digit-reversal is
+performed. The classic approach is a single, separate digit-reversal
+pass following or preceding the arithmetic computations; this approach
+is so common and so deeply embedded into FFT lore that many
+practitioners find it difficult to imagine an FFT without an
+explicit bit-reversal stage. Although this pass requires only <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+time <link target-id="bid23"/>, it can still be non-negligible, especially if the
+data is out-of-cache; moreover, it neglects the possibility that data
+reordering during the transform may improve memory locality. Perhaps
+the oldest alternative is the Stockham <emphasis>auto-sort</emphasis>
+FFT <link target-id="bid24"/>, <link target-id="bid19"/>, which transforms back and forth
+between two arrays with each butterfly, transposing one digit each
+time, and was popular to improve contiguity of access for vector
+computers <link target-id="bid25"/>. Alternatively, an explicitly
+recursive style, as in FFTW, performs the digit-reversal implicitly
+at the “leaves” of its computation when operating out-of-place
+(see section <link target-id="uid38">"Discussion"</link>). A simple example of this
+style, which computes in-order output using an out-of-place radix-2
+FFT without explicit bit-reversal, is shown in the algorithm of <link target-id="element-948"/>
+[corresponding to <link target-id="uid8"/>(right)]. To operate in-place
+with <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math> scratch storage, one can interleave small matrix
+transpositions with the
+butterflies <link target-id="bid26"/>, <link target-id="bid27"/>, <link target-id="bid28"/>, <link target-id="bid29"/>, and a
+related strategy in FFTW <link target-id="bid16"/> is briefly described by
+<link target-id="uid38">"Discussion"</link>.</para>
+      <para id="id2258021">Finally, we should mention that there are many FFTs entirely
+distinct from Cooley-Tukey. Three notable such algorithms are the
+<emphasis>prime-factor algorithm</emphasis> for <m:math><m:mrow><m:mo movablelimits="true" form="prefix">gcd</m:mo><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math> <link target-id="bid30"/>, along with Rader's <link target-id="bid31"/> and
+Bluestein's <link target-id="bid32"/>, <link target-id="bid33"/>, <link target-id="bid30"/> algorithms
+for prime <m:math><m:mi>n</m:mi></m:math>. FFTW implements the first two in its codelet
+generator for hard-coded <m:math><m:mi>n</m:mi></m:math> <link target-id="uid41">"Generating Small FFT Kernels"</link> and the latter two for
+general prime <m:math><m:mi>n</m:mi></m:math> (sections <link target-id="uid37">"Plans for prime sizes"</link> and <link target-id="uid47">"Goals and Background of the FFTW Project"</link>). There is also the Winograd
+FFT <link target-id="bid3"/>, <link target-id="bid4"/>, <link target-id="bid5"/>, <link target-id="bid1"/>, which
+minimizes the number of multiplications at the expense of a large
+number of additions; this trade-off is not beneficial on current
+processors that have specialized hardware multipliers.</para>
+    </section>
+    <section id="uid47">
+      <title>Goals and Background of the FFTW Project</title>
+      <para id="id2266220">The FFTW project, begun in 1997 as a side project of the authors Frigo and Johnson as graduate students at MIT, has gone through several major revisions, and as of 2008 consists of more than 40,000 lines of code. It is difficult to measure the popularity of a free-software package, but (as of 2008) FFTW has been cited in over 500 academic papers, is used in hundreds of shipping free and proprietary software packages, and the authors have received over 10,000 emails from users of the software.  Most of this chapter focuses on performance of FFT implementations, but FFTW would probably not be where it is today if that were the only consideration in its design.  One of the key factors in FFTW's success seems to have been its flexibility in addition to its performance. In fact, FFTW is probably
+the most flexible DFT library available:</para>
+      <list id="id2266227" list-type="bulleted">
+        <item id="uid48">FFTW is written in portable C and runs well on many
+architectures and operating systems.
+</item>
+        <item id="uid49">FFTW computes DFTs in <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> time for any
+length <m:math><m:mi>n</m:mi></m:math>. (Most other DFT implementations are either
+restricted to a subset of sizes or they become <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>)</m:mo></m:mrow></m:math> for
+certain values of <m:math><m:mi>n</m:mi></m:math>, for example when <m:math><m:mi>n</m:mi></m:math> is prime.)
+</item>
+        <item id="uid50">FFTW imposes no restrictions on the rank (dimensionality) of
+multi-dimensional transforms. (Most other implementations are
+limited to one-dimensional, or at most two- and three-dimensional
+data.)
+</item>
+        <item id="uid51">FFTW supports multiple and/or strided DFTs; for example,
+to transform a 3-component vector field or a portion of a
+multi-dimensional array. (Most implementations support only a
+single DFT of contiguous data.)
+</item>
+        <item id="uid52">FFTW supports DFTs of real data, as well as of real
+symmetric/anti-symmetric data (also called discrete cosine/sine
+transforms).
+</item>
+      </list>
+      <para id="id2266369">Our design philosophy has been to first define the most general
+reasonable functionality, and then to obtain the highest possible
+performance without sacrificing this generality. In this section, we
+offer a few thoughts about why such flexibility has proved important,
+and how it came about that FFTW was designed in this way.</para>
+      <para id="id2266377">FFTW's generality is partly a consequence of the fact the FFTW
+project was started in response to the needs of a real application for
+one of the authors (a spectral solver for Maxwell's
+equations <link target-id="bid54"/>), which from the beginning had to run
+on heterogeneous hardware. Our initial application required
+multi-dimensional DFTs of three-component vector fields (magnetic
+fields in electromagnetism), and so right away this meant: (i)
+multi-dimensional FFTs; (ii) user-accessible loops of FFTs of
+discontiguous data; (iii) efficient support for non-power-of-two sizes
+(the factor of eight difference between <m:math><m:mrow><m:mi>n</m:mi><m:mo>×</m:mo><m:mi>n</m:mi><m:mo>×</m:mo><m:mi>n</m:mi></m:mrow></m:math> and
+<m:math><m:mrow><m:mn>2</m:mn><m:mi>n</m:mi><m:mo>×</m:mo><m:mn>2</m:mn><m:mi>n</m:mi><m:mo>×</m:mo><m:mn>2</m:mn><m:mi>n</m:mi></m:mrow></m:math> was too much to tolerate); and (iv) saving a
+factor of two for the common real-input case was desirable. That is,
+the initial requirements already encompassed most of the features
+above, and nothing about this application is particularly unusual.</para>
+      <para id="id2266449">Even for one-dimensional DFTs, there is a common misperception that
+one should always choose power-of-two sizes if one cares about
+efficiency. Thanks to FFTW's code generator (described in <link target-id="uid41">"Generating Small FFT Kernels"</link>), we could afford to
+devote equal optimization effort to any <m:math><m:mi>n</m:mi></m:math> with small factors (2, 3,
+5, and 7 are good), instead of mostly optimizing powers of two like
+many high-performance FFTs. As a result, to pick a typical example
+on the 3 GHz Core Duo processor of <link target-id="uid3"/>, <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>3600</m:mn><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mn>4</m:mn></m:msup><m:mo>·</m:mo><m:msup><m:mn>3</m:mn><m:mn>2</m:mn></m:msup><m:mo>·</m:mo><m:msup><m:mn>5</m:mn><m:mn>2</m:mn></m:msup></m:mrow></m:math> and <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>3840</m:mn><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mn>8</m:mn></m:msup><m:mo>·</m:mo><m:mn>3</m:mn><m:mo>·</m:mo><m:mn>5</m:mn></m:mrow></m:math> both execute faster
+than <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>4096</m:mn><m:mo>=</m:mo><m:msup><m:mn>2</m:mn><m:mn>12</m:mn></m:msup></m:mrow></m:math>. (And if there are factors one particularly
+cares about, one can generate code for them too.)</para>
+      <para id="id2266580">One initially missing feature was efficient support for large prime
+sizes; the conventional wisdom was that large-prime algorithms were
+mainly of academic interest, since in real applications (including
+ours) one has enough freedom to choose a highly composite transform
+size. However, the prime-size algorithms are fascinating, so we
+implemented Rader's <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> prime-<m:math><m:mi>n</m:mi></m:math> algorithm <link target-id="bid31"/> purely for fun,
+including it in FFTW 2.0 (released in 1998) as a bonus feature. The response was
+astonishingly positive—even though users are (probably) never
+<emphasis>forced</emphasis> by their application to compute a prime-size DFT, it
+is rather inconvenient to always worry that collecting an unlucky
+number of data points will slow down one's analysis by a factor of a
+million. The prime-size algorithms are certainly slower than
+algorithms for nearby composite sizes, but in interactive
+data-analysis situations the difference between 1 ms and 10 ms means little,
+while educating users to avoid large prime factors is hard.</para>
+      <para id="id2266652">Another form of flexibility that deserves comment has to do with a
+purely technical aspect of computer software. FFTW's
+implementation involves some unusual language choices internally
+(the FFT-kernel generator, described in <link target-id="uid41">"Generating Small FFT Kernels"</link>,
+ is written in Objective Caml, a functional language
+especially suited for compiler-like programs), but its user-callable
+interface is purely in C with lowest-common-denominator datatypes
+(arrays of floating-point values). The advantage of this is that
+FFTW can be (and has been) called from almost any other programming
+language, from Java to Perl to Fortran 77. Similar
+lowest-common-denominator interfaces are apparent in many other
+popular numerical libraries, such as LAPACK <link target-id="bid55"/>. Language
+preferences arouse strong feelings, but this technical constraint means
+that modern programming dialects are best hidden from view for a
+numerical library.</para>
+      <para id="id2266689">Ultimately, very few scientific-computing applications should have
+performance as their top priority. Flexibility is often far more important,
+because one wants to be limited only by one's imagination, rather than
+by one's software, in the kinds of problems that can be studied.</para>
+    </section>
+    <section id="uid9">
+      <title>FFTs and the Memory Hierarchy</title>
+      <para id="id2258183">There are many complexities of computer architectures that impact the
+optimization of FFT implementations, but one of the most pervasive
+is the memory hierarchy. On any modern general-purpose computer,
+memory is arranged into a hierarchy of storage devices with increasing
+size and decreasing speed: the fastest and smallest memory being the
+CPU registers, then two or three levels of cache, then the main-memory
+RAM, then external storage such as hard disks.<footnote id="id10424403">A hard disk is
+utilized by “out-of-core” FFT algorithms for very large <m:math><m:mi>n</m:mi></m:math> <link target-id="bid19"/>, but these algorithms appear to have been largely superseded in practice
+by both the gigabytes of memory now common on personal computers and,
+for extremely large <m:math><m:mi>n</m:mi></m:math>, by algorithms for distributed-memory parallel
+computers.</footnote> Most of these levels are managed automatically by
+the hardware to hold the most-recently-used data from the next level
+in the hierarchy.<footnote id="id10424443">This includes the registers: on current
+“x86” processors, the user-visible instruction set (with a small
+number of floating-point registers) is internally translated at
+runtime to RISC-like “<m:math><m:mi>μ</m:mi></m:math>-ops” with a much larger number of
+physical <emphasis>rename registers</emphasis> that are allocated automatically.</footnote>
+There are many complications, however, such as limited cache
+associativity (which means that certain locations in memory cannot be
+cached simultaneously) and cache lines (which optimize the cache for
+contiguous memory access), which are reviewed in numerous textbooks on
+computer architectures. In this section, we focus on the
+simplest abstract principles of memory hierarchies in order to grasp
+their fundamental impact on FFTs.</para>
+      <para id="id2258273">Because access to memory is in many cases the slowest part of the
+computer, especially compared to arithmetic, one wishes to load as
+much data as possible in to the faster levels of the hierarchy, and
+then perform as much computation as possible before going back to the
+slower memory devices. This is called <term>temporal locality</term>: if a given datum is used more than once, we arrange the
+computation so that these usages occur as close together as possible
+in time.</para>
+      <section id="uid12">
+        <title>Understanding FFTs with an ideal cache</title>
+        <para id="id2258296">To understand temporal-locality strategies at a basic level, in this
+section we will employ an idealized model of a cache in a two-level
+memory hierarchy, as defined in <link target-id="bid34"/>.
+This
+<term>ideal cache</term> stores <m:math><m:mi>Z</m:mi></m:math> data items from main memory
+(e.g. complex numbers for our purposes): when the processor loads a
+datum from memory, the access is quick if the datum is already in the
+cache (a <term>cache hit</term>) and slow otherwise (a <term>cache
+miss</term>, which requires the datum to be fetched into the cache). When a
+datum is loaded into the cache,<footnote id="id10424587">More generally, one can
+assume that a <term>cache line</term> of <m:math><m:mi>L</m:mi></m:math> consecutive data items are
+loaded into the cache at once, in order to exploit spatial locality.
+The ideal-cache model in this case requires that the cache be
+<term>tall</term>: <m:math><m:mrow><m:mi>Z</m:mi><m:mo>=</m:mo><m:mi>Ω</m:mi><m:mo>(</m:mo><m:msup><m:mi>L</m:mi><m:mn>2</m:mn></m:msup><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid34"/>.</footnote> it must replace
+some other datum, and the ideal-cache model assumes that the optimal
+replacement strategy is used <link target-id="bid35"/>: the new datum replaces
+the datum that will not be needed for the longest time in the future;
+in practice, this can be simulated to within a factor of two by
+replacing the least-recently used datum <link target-id="bid34"/>, but ideal
+replacement is much simpler to analyze. Armed with this ideal-cache
+model, we can now understand some basic features of FFT
+implementations that remain essentially true even on real cache
+architectures. In particular, we want to know the <term>cache
+complexity</term>, the number <m:math><m:mrow><m:mi>Q</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>;</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow></m:math> of cache misses for an FFT of size
+<m:math><m:mi>n</m:mi></m:math> with an ideal cache of size <m:math><m:mi>Z</m:mi></m:math>, and what algorithm choices reduce
+this complexity.</para>
+        <para id="id2258477">First, consider a textbook radix-2 algorithm, which divides <m:math><m:mi>n</m:mi></m:math> by 2
+at each stage and operates breadth-first as in
+<link target-id="uid8"/>(left), performing all butterflies of a given
+size at a time. If <m:math><m:mrow><m:mi>n</m:mi><m:mo>&gt;</m:mo><m:mi>Z</m:mi></m:mrow></m:math>, then each pass over the array incurs
+<m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> cache misses to reload the data, and there are <m:math><m:mrow><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi></m:mrow></m:math>
+passes, for <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> cache misses in total—no temporal
+locality at all is exploited!</para>
+        <para id="id2258581">One traditional solution to this problem is <term>blocking</term>: the
+computation is divided into maximal blocks that fit into the cache,
+and the computations for each block are completed before moving on to
+the next block. Here, a block of <m:math><m:mi>Z</m:mi></m:math> numbers can fit into the
+cache<footnote id="id10424854">Of course, <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> additional storage may be required
+for twiddle factors, the output data (if the FFT is not in-place),
+and so on, but these only affect the <m:math><m:mi>n</m:mi></m:math> that fits into cache by a
+constant factor and hence do not impact cache-complexity analysis. We
+won't worry about such constant factors in this section.</footnote> (not
+including storage for twiddle factors and so on), and thus the natural
+unit of computation is a sub-FFT of size <m:math><m:mi>Z</m:mi></m:math>. Since each of these
+blocks involves <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>Z</m:mi><m:mo form="prefix">log</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow></m:math> arithmetic operations, and there
+are <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> operations overall, there must be
+<m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mfrac><m:mi>n</m:mi><m:mi>Z</m:mi></m:mfrac><m:msub><m:mo form="prefix">log</m:mo><m:mi>Z</m:mi></m:msub><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> such blocks. More explicitly, one
+could use a radix-<m:math><m:mi>Z</m:mi></m:math> Cooley-Tukey algorithm, breaking <m:math><m:mi>n</m:mi></m:math> down by
+factors of <m:math><m:mi>Z</m:mi></m:math> [or <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow></m:math>] until a size <m:math><m:mi>Z</m:mi></m:math> is reached: each
+stage requires <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mi>Z</m:mi></m:mrow></m:math> blocks, and there are <m:math><m:mrow><m:msub><m:mo form="prefix">log</m:mo><m:mi>Z</m:mi></m:msub><m:mi>n</m:mi></m:mrow></m:math> stages, again
+giving <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mfrac><m:mi>n</m:mi><m:mi>Z</m:mi></m:mfrac><m:msub><m:mo form="prefix">log</m:mo><m:mi>Z</m:mi></m:msub><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> blocks overall. Since each
+block requires <m:math><m:mi>Z</m:mi></m:math> cache misses to load it into cache, the cache
+complexity <m:math><m:msub><m:mi>Q</m:mi><m:mi>b</m:mi></m:msub></m:math> of such a blocked algorithm is</para>
+        <equation id="uid15">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>Q</m:mi>
+                <m:mi>b</m:mi>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>;</m:mo>
+                <m:mi>Z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>Θ</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:msub>
+                  <m:mo form="prefix">log</m:mo>
+                  <m:mi>Z</m:mi>
+                </m:msub>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2258939">In fact, this complexity is rigorously <term>optimal</term> for Cooley-Tukey
+FFT algorithms <link target-id="bid36"/>, and immediately points us towards
+<term>large radices</term> (not radix 2!) to exploit caches effectively in
+FFTs.</para>
+        <para id="id2258965">However, there is one shortcoming of any blocked FFT algorithm: it
+is <term>cache aware</term>, meaning that the implementation depends
+explicitly on the cache size <m:math><m:mi>Z</m:mi></m:math>. The implementation must be modified
+(e.g. changing the radix) to adapt to different machines as the cache
+size changes. Worse, as mentioned above, actual machines have
+multiple levels of cache, and to exploit these one must perform
+multiple levels of blocking, each parameterized by the corresponding
+cache size. In the above example, if there were a smaller and faster
+cache of size <m:math><m:mrow><m:mi>z</m:mi><m:mo>&lt;</m:mo><m:mi>Z</m:mi></m:mrow></m:math>, the size-<m:math><m:mi>Z</m:mi></m:math> sub-FFTs should themselves be
+performed via radix-<m:math><m:mi>z</m:mi></m:math> Cooley-Tukey using blocks of size <m:math><m:mi>z</m:mi></m:math>. And so
+on. There are two paths out of these difficulties: one is
+self-optimization, where the implementation automatically adapts
+itself to the hardware (implicitly including any cache sizes), as
+described in <link target-id="uid24">"Adaptive Composition of FFT Algorithms"</link>; the other is to exploit
+<term>cache-oblivious</term> algorithms. FFTW employs both of these
+techniques.</para>
+        <para id="id2259055">The goal of cache-obliviousness is to structure the algorithm so that
+it exploits the cache without having the cache size as a parameter:
+the same code achieves the same asymptotic cache complexity regardless
+of the cache size <m:math><m:mi>Z</m:mi></m:math>. An <term>optimal cache-oblivious</term> algorithm
+achieves the <emphasis>optimal</emphasis> cache complexity (that is, in an
+asymptotic sense, ignoring constant factors). Remarkably, optimal
+cache-oblivious algorithms exist for many problems, such as matrix
+multiplication, sorting, transposition, and FFTs <link target-id="bid34"/>.
+Not all cache-oblivious algorithms are optimal, of course—for
+example, the textbook radix-2 algorithm discussed above is
+“pessimal” cache-oblivious (its cache complexity is independent of
+<m:math><m:mi>Z</m:mi></m:math> because it always achieves the worst case!).</para>
+        <para id="id2259113">For instance, <link target-id="uid8"/>(right) and the algorithm of <link target-id="element-948"/> shows a way to
+obliviously exploit the cache with a radix-2 Cooley-Tukey algorithm,
+by ordering the computation depth-first rather than breadth-first.
+That is, the DFT of size <m:math><m:mi>n</m:mi></m:math> is divided into two DFTs of size
+<m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math>, and one DFT of size <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> is <emphasis>completely finished</emphasis>
+before doing <emphasis>any</emphasis> computations for the second DFT of size
+<m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math>. The two subtransforms are then combined using <m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> radix-2
+butterflies, which requires a pass over the array and (hence <m:math><m:mi>n</m:mi></m:math> cache
+misses if <m:math><m:mrow><m:mi>n</m:mi><m:mo>&gt;</m:mo><m:mi>Z</m:mi></m:mrow></m:math>). This process is repeated recursively until a
+base-case (e.g. size 2) is reached. The cache complexity <m:math><m:mrow><m:msub><m:mi>Q</m:mi><m:mn>2</m:mn></m:msub><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>;</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math>
+of this algorithm satisfies the recurrence</para>
+        <equation id="uid16">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>Q</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>;</m:mo>
+                <m:mi>Z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mfenced separators="" open="{" close="">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd columnalign="left">
+                      <m:mi>n</m:mi>
+                    </m:mtd>
+                    <m:mtd columnalign="left">
+                      <m:mrow>
+                        <m:mi>n</m:mi>
+                        <m:mo>≤</m:mo>
+                        <m:mi>Z</m:mi>
+                      </m:mrow>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd columnalign="left">
+                      <m:mrow>
+                        <m:mn>2</m:mn>
+                        <m:msub>
+                          <m:mi>Q</m:mi>
+                          <m:mn>2</m:mn>
+                        </m:msub>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi>n</m:mi>
+                          <m:mo>/</m:mo>
+                          <m:mn>2</m:mn>
+                          <m:mo>;</m:mo>
+                          <m:mi>Z</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:mo>+</m:mo>
+                        <m:mi>Θ</m:mi>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi>n</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                      </m:mrow>
+                    </m:mtd>
+                    <m:mtd columnalign="left">
+                      <m:mi> otherwise </m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259372">The key property is this: once the recursion reaches a size <m:math><m:mrow><m:mi>n</m:mi><m:mo>≤</m:mo><m:mi>Z</m:mi></m:mrow></m:math>, the subtransform fits into the cache and no further misses are
+incurred. The algorithm does not “know” this and continues
+subdividing the problem, of course, but all of those further
+subdivisions are in-cache because they are performed in the same
+depth-first branch of the tree. The solution of
+<link target-id="uid16"/> is</para>
+        <equation id="uid17">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>Q</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>;</m:mo>
+                <m:mi>Z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>Θ</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo form="prefix">log</m:mo>
+                <m:mrow>
+                  <m:mo>[</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mi>Z</m:mi>
+                  <m:mo>]</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259469">This is worse than the theoretical optimum <m:math><m:mrow><m:msub><m:mi>Q</m:mi><m:mi>b</m:mi></m:msub><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>;</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math> from
+<link target-id="uid15"/>, but it is cache-oblivious (<m:math><m:mi>Z</m:mi></m:math> never entered the
+algorithm) and exploits at least <emphasis>some</emphasis> temporal
+locality.<footnote id="id10425904">This advantage of depth-first recursive
+implementation of the radix-2 FFT was pointed out many years ago
+by Singleton (where the “cache” was core
+memory) <link target-id="bid22"/>.</footnote> On the other hand, when it is combined
+with FFTW's self-optimization and larger radices in
+<link target-id="uid24">"Adaptive Composition of FFT Algorithms"</link>, this algorithm actually performs very well until <m:math><m:mi>n</m:mi></m:math>
+becomes extremely large. By itself, however, the algorithm of <link target-id="element-948"/> must
+be modified to attain adequate performance for reasons that have
+nothing to do with the cache. These practical issues are discussed
+further in <link target-id="uid20">"Cache-obliviousness in practice"</link>.</para>
+        <para id="id2259574">There exists a different recursive FFT that is <emphasis>optimal</emphasis>
+cache-oblivious, however, and that is the radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math>
+“four-step” Cooley-Tukey algorithm (again executed recursively,
+depth-first) <link target-id="bid34"/>. The cache complexity <m:math><m:msub><m:mi>Q</m:mi><m:mi>o</m:mi></m:msub></m:math> of this algorithm
+satisfies the recurrence:</para>
+        <equation id="uid19">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>Q</m:mi>
+                <m:mi>o</m:mi>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>;</m:mo>
+                <m:mi>Z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mfenced separators="" open="{" close="">
+                <m:mtable>
+                  <m:mtr>
+                    <m:mtd columnalign="left">
+                      <m:mi>n</m:mi>
+                    </m:mtd>
+                    <m:mtd columnalign="left">
+                      <m:mrow>
+                        <m:mi>n</m:mi>
+                        <m:mo>≤</m:mo>
+                        <m:mi>Z</m:mi>
+                      </m:mrow>
+                    </m:mtd>
+                  </m:mtr>
+                  <m:mtr>
+                    <m:mtd columnalign="left">
+                      <m:mrow>
+                        <m:mn>2</m:mn>
+                        <m:msqrt>
+                          <m:mi>n</m:mi>
+                        </m:msqrt>
+                        <m:msub>
+                          <m:mi>Q</m:mi>
+                          <m:mi>o</m:mi>
+                        </m:msub>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:msqrt>
+                            <m:mi>n</m:mi>
+                          </m:msqrt>
+                          <m:mo>;</m:mo>
+                          <m:mi>Z</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                        <m:mo>+</m:mo>
+                        <m:mi>Θ</m:mi>
+                        <m:mrow>
+                          <m:mo>(</m:mo>
+                          <m:mi>n</m:mi>
+                          <m:mo>)</m:mo>
+                        </m:mrow>
+                      </m:mrow>
+                    </m:mtd>
+                    <m:mtd columnalign="left">
+                      <m:mi> otherwise </m:mi>
+                    </m:mtd>
+                  </m:mtr>
+                </m:mtable>
+              </m:mfenced>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259730">That is, at each stage one performs <m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> DFTs of size
+<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> (recursively), then multiplies by the <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> twiddle
+factors (and does a matrix transposition to obtain in-order output),
+then finally performs another <m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> DFTs of size <m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math>. The
+solution of <link target-id="uid19"/> is <m:math><m:mrow><m:msub><m:mi>Q</m:mi><m:mi>o</m:mi></m:msub><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>;</m:mo><m:mi>Z</m:mi><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:mi>Θ</m:mi><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:msub><m:mo form="prefix">log</m:mo><m:mi>Z</m:mi></m:msub><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, the
+same as the optimal cache complexity <link target-id="uid15"/>!</para>
+        <para id="id2259858">These algorithms illustrate the basic features of most optimal
+cache-oblivious algorithms: they employ a recursive divide-and-conquer
+strategy to subdivide the problem until it fits into cache, at which
+point the subdivision continues but no further cache misses are
+required. Moreover, a cache-oblivious algorithm exploits all levels
+of the cache in the same way, so an optimal cache-oblivious algorithm
+exploits a multi-level cache optimally as well as a two-level
+cache <link target-id="bid34"/>: the multi-level “blocking” is implicit in
+the recursion.</para>
+      </section>
+      <section id="uid20">
+        <title>Cache-obliviousness in practice</title>
+        <para id="id2259893">Even though the radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> algorithm is optimal cache-oblivious,
+it does not follow that FFT implementation is a solved problem. The
+optimality is only in an asymptotic sense, ignoring constant factors,
+<m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> terms, etcetera, all of which can matter a great deal in
+practice. For small or moderate <m:math><m:mi>n</m:mi></m:math>, quite different algorithms may
+be superior, as discussed in <link target-id="uid22">"Memory strategies in FFTW"</link>. Moreover, real
+caches are inferior to an ideal cache in several ways. The
+unsurprising consequence of all this is that cache-obliviousness, like
+any complexity-based algorithm property, does not absolve one from the
+ordinary process of software optimization. At best, it reduces the
+amount of memory/cache tuning that one needs to perform, structuring
+the implementation to make further optimization easier and more
+portable.</para>
+        <para id="id2259951">Perhaps most importantly, one needs to perform an optimization that
+has almost nothing to do with the caches: the recursion must be
+“coarsened” to amortize the function-call overhead and to enable
+compiler optimization. For example, the simple pedagogical code of the
+algorithm in <link target-id="element-948"/> recurses all the way down to <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math>, and hence
+there are <m:math><m:mrow><m:mo>≈</m:mo><m:mn>2</m:mn><m:mi>n</m:mi></m:mrow></m:math> function calls in total, so that every data
+point incurs a two-function-call overhead on average. Moreover, the
+compiler cannot fully exploit the large register sets and instruction-level
+parallelism of modern processors with an <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math> function
+body.<footnote id="id10426509">In principle, it might be possible for a compiler to
+automatically coarsen the recursion, similar to how compilers can
+partially unroll loops. We are currently unaware of any
+general-purpose compiler that performs this optimization, however.</footnote>
+These problems can be effectively erased, however, simply by making
+the base cases larger, e.g. the recursion could stop when <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>32</m:mn></m:mrow></m:math> is
+reached, at which point a highly optimized hard-coded FFT of that
+size would be executed. In FFTW, we produced this sort of large
+base-case using a specialized code-generation program described in
+<link target-id="uid41">"Generating Small FFT Kernels"</link>.</para>
+        <para id="id2260054">One might get the impression that there is a strict dichotomy that
+divides cache-aware and cache-oblivious algorithms, but the two are
+not mutually exclusive in practice. Given an implementation of a
+cache-oblivious strategy, one can further optimize it for the cache
+characteristics of a particular machine in order to improve the
+constant factors. For example, one can tune the radices used, the
+transition point between the radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> algorithm and the
+bounded-radix algorithm, or other algorithmic choices as described
+in <link target-id="uid22">"Memory strategies in FFTW"</link>. The advantage of starting cache-aware tuning with a
+cache-oblivious approach is that the starting point already exploits
+all levels of the cache to some extent, and one has reason to hope
+that good performance on one machine will be more portable to other
+architectures than for a purely cache-aware “blocking” approach. In
+practice, we have found this combination to be very successful with
+FFTW.</para>
+      </section>
+      <section id="uid22">
+        <title>Memory strategies in FFTW</title>
+        <para id="id2260104">The recursive cache-oblivious strategies described above form a useful
+starting point, but FFTW supplements them with a number of
+additional tricks, and also exploits cache-obliviousness in
+less-obvious forms.</para>
+        <para id="id2260110">We currently find that the general radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> algorithm is
+beneficial only when <m:math><m:mi>n</m:mi></m:math> becomes very large, on the order of <m:math><m:mrow><m:msup><m:mn>2</m:mn><m:mn>20</m:mn></m:msup><m:mo>≈</m:mo><m:msup><m:mn>10</m:mn><m:mn>6</m:mn></m:msup></m:mrow></m:math>. In practice, this means that we use at most a single
+step of radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> (two steps would only be used for <m:math><m:mrow><m:mi>n</m:mi><m:mo>≳</m:mo><m:msup><m:mn>2</m:mn><m:mn>40</m:mn></m:msup></m:mrow></m:math>). The reason for this is that the implementation of
+radix <m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> is less efficient than for a bounded radix: the
+latter has the advantage that an entire radix butterfly can be
+performed in hard-coded loop-free code within local
+variables/registers, including the necessary permutations and twiddle
+factors.</para>
+        <para id="id2260208">Thus, for more moderate <m:math><m:mi>n</m:mi></m:math>, FFTW uses depth-first recursion with a
+bounded radix, similar in spirit to the algorithm of <link target-id="element-948"/> but with much
+larger radices (radix 32 is common) and base cases (size 32 or 64 is
+common) as produced by the code generator of <link target-id="uid41">"Generating Small FFT Kernels"</link>. The
+self-optimization described in <link target-id="uid24">"Adaptive Composition of FFT Algorithms"</link> allows the choice of
+radix and the transition to the radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> algorithm to be tuned
+in a cache-aware (but entirely automatic) fashion.</para>
+        <para id="id2260253">For small <m:math><m:mi>n</m:mi></m:math> (including the radix butterflies and the base cases of
+the recursion), hard-coded FFTs (FFTW's <emphasis>codelets</emphasis>) are
+employed. However, this gives rise to an interesting problem: a
+codelet for (e.g.) <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mn>64</m:mn></m:mrow></m:math> is <m:math><m:mrow><m:mo>∼</m:mo><m:mn>2000</m:mn></m:mrow></m:math> lines long, with hundreds of
+variables and over 1000 arithmetic operations that can be executed in
+many orders, so what order should be chosen? The key problem here is
+the efficient use of the CPU registers, which essentially form a
+nearly ideal, fully associative cache. Normally, one relies on the
+compiler for all code scheduling and register allocation, but but the
+compiler needs help with such long blocks of code (indeed, the general
+register-allocation problem is NP-complete). In particular, FFTW's
+generator knows more about the code than the compiler—the generator
+knows it is an FFT, and therefore it can use an optimal
+cache-oblivious schedule (analogous to the radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> algorithm)
+to order the code independent of the number of
+registers <link target-id="bid37"/>. The compiler is then used only for local
+“cache-aware” tuning (both for register allocation and the CPU
+pipeline).<footnote id="id10426879">One practical difficulty is that some
+“optimizing” compilers will tend to greatly re-order the code,
+destroying FFTW's optimal schedule. With GNU gcc, we circumvent this
+problem by using compiler flags that explicitly disable certain stages of the
+optimizer.</footnote> As a practical matter, one consequence of this scheduler
+is that FFTW's machine-independent codelets are no slower than
+machine-specific codelets generated by an automated search and
+optimization over many possible codelet implementations, as performed
+by the SPIRAL project <link target-id="bid38"/>.</para>
+        <para id="id2260374">(When implementing hard-coded base cases, there is another choice because a
+loop of small transforms is always required. Is it better to
+implement a hard-coded FFT of size 64, for example, or an unrolled
+loop of four size-16 FFTs, both of which operate on the same amount
+of data? The former should be more efficient because it performs more
+computations with the same amount of data, thanks to the <m:math><m:mrow><m:mo form="prefix">log</m:mo><m:mi>n</m:mi></m:mrow></m:math>
+factor in the FFT's <m:math><m:mrow><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi></m:mrow></m:math> complexity.)</para>
+        <para id="id2260416">In addition, there are many other techniques that FFTW employs to
+supplement the basic recursive strategy, mainly to address the fact
+that cache implementations strongly favor accessing consecutive
+data—thanks to cache lines, limited associativity, and direct
+mapping using low-order address bits (accessing data at power-of-two
+intervals in memory, which is distressingly common in FFTs, is thus
+especially prone to cache-line conflicts). Unfortunately, the known
+FFT algorithms inherently involve some non-consecutive access
+(whether mixed with the computation or in separate
+bit-reversal/transposition stages). There are many optimizations in
+FFTW to address this. For example, the data for several
+butterflies at a time can be copied to a small buffer before computing
+and then copied back, where the copies and computations involve more
+consecutive access than doing the computation directly in-place. Or,
+the input data for the subtransform can be copied from
+(discontiguous) input to (contiguous) output before performing the
+subtransform in-place (see <link target-id="uid36">"Indirect plans"</link>), rather than
+performing the subtransform directly out-of-place (as in
+<link target-id="element-948">algorithm 1</link>). Or, the order of loops can be interchanged in
+order to push the outermost loop from the first radix step [the <m:math><m:msub><m:mi>ℓ</m:mi><m:mn>2</m:mn></m:msub></m:math>
+loop in <link target-id="uid7"/>] down to the leaves, in order to make the input
+access more consecutive (see <link target-id="uid38">"Discussion"</link>). Or, the twiddle
+factors can be computed using a smaller look-up table (fewer memory
+loads) at the cost of more arithmetic (see <link target-id="uid45">"Numerical Accuracy in FFTs"</link>). The
+choice of whether to use any of these techniques, which come into play
+mainly for moderate <m:math><m:mi>n</m:mi></m:math> (<m:math><m:mrow><m:msup><m:mn>2</m:mn><m:mn>13</m:mn></m:msup><m:mo>&lt;</m:mo><m:mi>n</m:mi><m:mo>&lt;</m:mo><m:msup><m:mn>2</m:mn><m:mn>20</m:mn></m:msup></m:mrow></m:math>), is made by the
+self-optimizing planner as described in the next section.</para>
+      </section>
+    </section>
+    <section id="uid24">
+      <title>Adaptive Composition of FFT Algorithms</title>
+      <para id="id2260558">As alluded to several times already, FFTW implements a wide variety
+of FFT algorithms (mostly rearrangements of Cooley-Tukey) and
+selects the “best” algorithm for a given <m:math><m:mi>n</m:mi></m:math> automatically. In this
+section, we describe how such self-optimization is implemented, and
+especially how FFTW's algorithms are structured as a composition of
+algorithmic fragments. These techniques in FFTW are described in
+greater detail elsewhere <link target-id="bid16"/>, so here we will focus only on
+the essential ideas and the motivations behind them.</para>
+      <para id="id2260593">An FFT algorithm in FFTW is a composition of algorithmic steps
+called a <term>plan</term>. The algorithmic steps each solve a certain
+class of <term>problems</term> (either solving the problem directly or
+recursively breaking it into sub-problems of the same type). The
+choice of plan for a given problem is determined by a <term>planner</term>
+that selects a composition of steps, either by runtime measurements to
+pick the fastest algorithm, or by heuristics, or by loading a
+pre-computed plan. These three pieces: problems, algorithmic steps,
+and the planner, are discussed in the following subsections.</para>
+      <section id="uid25">
+        <title>The problem to be solved</title>
+        <para id="id2260629">In early versions of FFTW, the only choice made by the planner was
+the sequence of radices <link target-id="bid39"/>, and so each step of the plan
+took a DFT of a given size <m:math><m:mi>n</m:mi></m:math>, possibly with discontiguous
+input/output, and reduced it (via a radix <m:math><m:mi>r</m:mi></m:math>) to DFTs of size
+<m:math><m:mrow><m:mi>n</m:mi><m:mo>/</m:mo><m:mi>r</m:mi></m:mrow></m:math>, which were solved recursively. That is, each step solved the
+following problem: given a size <m:math><m:mi>n</m:mi></m:math>, an <term>input pointer</term> <m:math><m:mi mathvariant="bold">I</m:mi></m:math>, an <term>input stride</term> <m:math><m:mi>ι</m:mi></m:math>, an <term>output pointer</term> <m:math><m:mi mathvariant="bold">O</m:mi></m:math>, and an <term>output stride</term> <m:math><m:mi>o</m:mi></m:math>, it computed the DFT
+of <m:math><m:mrow><m:mi mathvariant="bold">I</m:mi><m:mo>[</m:mo><m:mi>ℓ</m:mi><m:mi>ι</m:mi><m:mo>]</m:mo></m:mrow></m:math> for <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>ℓ</m:mi><m:mo>&lt;</m:mo><m:mi>n</m:mi></m:mrow></m:math> and stored the result in
+<m:math><m:mrow><m:mi mathvariant="bold">O</m:mi><m:mo>[</m:mo><m:mi>k</m:mi><m:mi>o</m:mi><m:mo>]</m:mo></m:mrow></m:math> for <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>k</m:mi><m:mo>&lt;</m:mo><m:mi>n</m:mi></m:mrow></m:math>. However, we soon found that we
+could not easily express many interesting algorithms within this
+framework; for example, <term>in-place</term> (<m:math><m:mrow><m:mi mathvariant="bold">I</m:mi><m:mo>=</m:mo><m:mi mathvariant="bold">O</m:mi></m:mrow></m:math>) FFTs
+that do not require a separate bit-reversal
+stage <link target-id="bid26"/>, <link target-id="bid27"/>, <link target-id="bid28"/>, <link target-id="bid29"/>. It became
+clear that the key issue was not the choice of algorithms, as we had
+first supposed, but the definition of the problem to be solved.
+Because only problems that can be expressed can be solved, the
+representation of a problem determines an outer bound to the space of
+plans that the planner can explore, and therefore it ultimately
+constrains FFTW's performance.</para>
+        <para id="id2260889">The difficulty with our initial <m:math><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mrow></m:math> problem
+definition was that it forced each algorithmic step to address only a
+single DFT. In fact, FFTs break down DFTs into
+<emphasis>multiple</emphasis> smaller DFTs, and it is the <emphasis>combination</emphasis> of
+these smaller transforms that is best addressed by many algorithmic
+choices, especially to rearrange the order of memory accesses between
+the subtransforms. Therefore, we redefined our notion of a problem
+in FFTW to be not a single DFT, but rather a <emphasis>loop</emphasis> of
+DFTs, and in fact <emphasis>multiple nested loops</emphasis> of DFTs. The
+following sections describe some of the new algorithmic steps that
+such a problem definition enables, but first we will define the problem
+more precisely.</para>
+        <para id="id2260962">DFT problems in FFTW are expressed in terms of structures called
+I/O tensors,<footnote id="id10427591">I/O tensors are unrelated to the tensor-product
+notation used by some other authors to describe FFT
+algorithms <link target-id="bid19"/>, <link target-id="bid40"/>.</footnote> which in turn are described
+in terms of ancillary structures called I/O dimensions. An <term>I/O dimension</term> <m:math><m:mi>d</m:mi></m:math> is a triple <m:math><m:mrow><m:mi>d</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mrow></m:math>, where <m:math><m:mi>n</m:mi></m:math> is
+a non-negative integer called the <term>length</term>, <m:math><m:mi>ι</m:mi></m:math> is an integer
+called the <term>input stride</term>, and <m:math><m:mi>o</m:mi></m:math> is an integer called the
+<term>output stride</term>. An <term>I/O tensor</term> <m:math><m:mrow><m:mi>t</m:mi><m:mo>=</m:mo><m:mfenced separators="" open="{" close="}"><m:msub><m:mi>d</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>d</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:mo>...</m:mo><m:mo>,</m:mo><m:msub><m:mi>d</m:mi><m:mi>ρ</m:mi></m:msub></m:mfenced></m:mrow></m:math> is a
+set of I/O dimensions. The non-negative integer <m:math><m:mrow><m:mi>ρ</m:mi><m:mo>=</m:mo><m:mfenced open="|" close="|"><m:mi>t</m:mi></m:mfenced></m:mrow></m:math>
+is called the <term>rank</term> of the I/O tensor. A <term>DFT
+problem</term>, denoted by <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>, consists
+of two I/O tensors <m:math><m:mi mathvariant="bold">N</m:mi></m:math> and <m:math><m:mi mathvariant="bold">V</m:mi></m:math>, and of two <term>pointers</term> <m:math><m:mi mathvariant="bold">I</m:mi></m:math> and <m:math><m:mi mathvariant="bold">O</m:mi></m:math>. Informally, this describes <m:math><m:mfenced open="|" close="|"><m:mi mathvariant="bold">V</m:mi></m:mfenced></m:math>
+nested loops of <m:math><m:mfenced open="|" close="|"><m:mi mathvariant="bold">N</m:mi></m:mfenced></m:math>-dimensional DFTs with input data
+starting at memory location <m:math><m:mi mathvariant="bold">I</m:mi></m:math> and output data starting
+at <m:math><m:mi mathvariant="bold">O</m:mi></m:math>.</para>
+        <para id="id2261322">For simplicity, let us consider only one-dimensional DFTs, so that
+<m:math><m:mrow><m:mi mathvariant="bold">N</m:mi><m:mo>=</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced></m:mrow></m:math> implies a <m:math><m:mrow><m:mi>D</m:mi><m:mi>F</m:mi><m:mi>T</m:mi></m:mrow></m:math> of length <m:math><m:mi>n</m:mi></m:math>
+on input data with stride <m:math><m:mi>ι</m:mi></m:math> and output data with stride <m:math><m:mi>o</m:mi></m:math>,
+much like in the original FFTW as described above. The main new
+feature is then the addition of zero or more “loops” <m:math><m:mi mathvariant="bold">V</m:mi></m:math>. More
+formally, <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>∪</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math> is recursively defined as a “loop” of <m:math><m:mi>n</m:mi></m:math>
+problems: for all <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>k</m:mi><m:mo>&lt;</m:mo><m:mi>n</m:mi></m:mrow></m:math>, do all computations in
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>+</m:mo><m:mi>k</m:mi><m:mo>·</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>+</m:mo><m:mi>k</m:mi><m:mo>·</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mrow></m:math>.
+The case of multi-dimensional DFTs is defined more precisely
+elsewhere <link target-id="bid16"/>, but essentially each I/O dimension in <m:math><m:mi mathvariant="bold">N</m:mi></m:math> gives one
+dimension of the transform.</para>
+        <para id="id2261597">We call <m:math><m:mi mathvariant="bold">N</m:mi></m:math> the <emphasis>size</emphasis> of the problem. The <emphasis>rank</emphasis>
+of a problem is defined to be the rank of its size (i.e., the
+dimensionality of the DFT). Similarly, we call <m:math><m:mi mathvariant="bold">V</m:mi></m:math> the
+<emphasis>vector size</emphasis> of the problem, and the <emphasis>vector rank</emphasis> of a
+problem is correspondingly defined to be the rank of its vector size.
+Intuitively, the vector size can be interpreted as a set of “loops”
+wrapped around a single DFT, and we therefore refer to a single
+I/O dimension of <m:math><m:mi mathvariant="bold">V</m:mi></m:math> as a <emphasis>vector loop</emphasis>. (Alternatively, one
+can view the problem as describing a DFT over a
+<m:math><m:mfenced open="|" close="|"><m:mi mathvariant="bold">V</m:mi></m:mfenced></m:math>-dimensional vector space.) The problem does not
+specify the order of execution of these loops, however, and therefore
+FFTW is free to choose the fastest or most convenient order.</para>
+        <section id="uid27">
+          <title>DFT problem examples</title>
+          <para id="id2261701">A more detailed discussion of the space of problems in FFTW can be
+found in
+<link target-id="bid16"/>
+, but a simple understanding can be gained
+by examining a few examples demonstrating that the I/O tensor
+representation is sufficiently general to cover many situations that
+arise in practice, including some that are not usually considered to
+be instances of the DFT.</para>
+          <para id="id2261716">A single one-dimensional DFT of length <m:math><m:mi>n</m:mi></m:math>, with
+stride-1 input <m:math><m:mi mathvariant="bold">X</m:mi></m:math> and output <m:math><m:mi mathvariant="bold">Y</m:mi></m:math>, as in  <link target-id="uid6"/>, is
+denoted by the problem
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">Y</m:mi><m:mo>)</m:mo></m:mrow></m:math> (no
+loops: vector-rank zero).</para>
+          <para id="id2261820">As a more complicated example, suppose we have an <m:math><m:mrow><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>×</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math>
+matrix <m:math><m:mi mathvariant="bold">X</m:mi></m:math> stored as <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> consecutive blocks of contiguous
+length-<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> rows (this is called <term>row-major</term> format). The
+in-place DFT of all the <emphasis>rows</emphasis> of this matrix would be denoted
+by the problem
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>)</m:mo></m:mrow></m:math>:
+a length-<m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> loop of size-<m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> contiguous DFTs, where each
+iteration of the loop offsets its input/output data by a stride <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math>.
+Conversely, the in-place DFT of all the <emphasis>columns</emphasis> of this
+matrix would be denoted by
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>)</m:mo></m:mrow></m:math>:
+compared to the previous example, <m:math><m:mi mathvariant="bold">N</m:mi></m:math> and <m:math><m:mi mathvariant="bold">V</m:mi></m:math> are swapped. In
+the latter case, each DFT operates on discontiguous data, and
+FFTW might well choose to interchange the loops: instead of
+performing a loop of DFTs computed individually, the subtransforms
+themselves could act on <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math>-component vectors, as described in
+<link target-id="uid28">"The space of plans in FFTW"</link>.</para>
+          <para id="id2262199">A size-1 DFT is simply a copy <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo><m:mo>=</m:mo><m:mi>X</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math>, and here this can also
+be denoted by <m:math><m:mrow><m:mi mathvariant="bold">N</m:mi><m:mo>=</m:mo><m:mfenced separators="" open="{" close="}"/></m:mrow></m:math> (rank zero, a “zero-dimensional” DFT).
+This allows FFTW's problems to represent many kinds of copies and
+permutations of the data within the same problem framework, which is
+convenient because these sorts of operations arise frequently in
+FFT algorithms. For example, to copy <m:math><m:mi>n</m:mi></m:math> consecutive numbers from
+<m:math><m:mi mathvariant="bold">I</m:mi></m:math> to <m:math><m:mi mathvariant="bold">O</m:mi></m:math>, one would use the rank-zero problem
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>. More
+interestingly, the in-place <term>transpose</term> of an <m:math><m:mrow><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>×</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math>
+matrix <m:math><m:mi mathvariant="bold">X</m:mi></m:math> stored in row-major format, as described above, is
+denoted by <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mrow><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow><m:mo>,</m:mo><m:mrow><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>)</m:mo></m:mrow></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">X</m:mi><m:mo>)</m:mo></m:mrow></m:math> (rank zero, vector-rank two).</para>
+        </section>
+      </section>
+      <section id="uid28">
+        <title>The space of plans in FFTW</title>
+        <para id="id2262511">Here, we describe a subset of the possible plans considered by
+FFTW; while not exhaustive <link target-id="bid16"/>, this subset is enough to
+illustrate the basic structure of FFTW and the necessity of
+including the vector loop(s) in the problem definition to enable
+several interesting algorithms. The plans that we now describe
+usually perform some simple “atomic” operation, and it may not be
+apparent how these operations fit together to actually compute
+DFTs, or why certain operations are useful at all. We shall
+discuss those matters in <link target-id="uid38">"Discussion"</link>.</para>
+        <para id="id2262542">Roughly speaking, to solve a general DFT problem, one must perform
+three tasks. First, one must reduce a problem of arbitrary vector
+rank to a set of loops nested around a problem of vector rank 0, i.e.,
+a single (possibly multi-dimensional) DFT. Second, one must reduce
+the multi-dimensional DFT to a sequence of of rank-1 problems,
+i.e., one-dimensional DFTs; for simplicity, however, we do not
+consider multi-dimensional DFTs below. Third, one must solve the
+rank-1, vector rank-0 problem by means of some DFT algorithm such
+as Cooley-Tukey. These three steps need not be executed in the stated
+order, however, and in fact, almost every permutation and interleaving
+of these three steps leads to a correct DFT plan. The choice of the
+set of plans explored by the planner is critical for the usability of
+the FFTW system: the set must be large enough to contain the
+fastest possible plans, but it must be small enough to keep the
+planning time acceptable.</para>
+        <section id="uid29">
+          <title>Rank-0 plans</title>
+          <para id="id2262569">The rank-0 problem <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math> denotes
+a permutation of the input array into the output array. FFTW
+does not solve arbitrary rank-0 problems, only the following two
+special cases that arise in practice.</para>
+          <list id="id2262619" list-type="bulleted"><item id="uid30">When <m:math><m:mrow><m:mfenced open="|" close="|"><m:mi mathvariant="bold">V</m:mi></m:mfenced><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow></m:math> and <m:math><m:mrow><m:mi mathvariant="bold">I</m:mi><m:mo>≠</m:mo><m:mi mathvariant="bold">O</m:mi></m:mrow></m:math>, FFTW
+produces a plan that copies the input array into the output array.
+Depending on the strides, the plan consists of a
+loop or, possibly, of a call to the ANSI C function <code>memcpy</code>, which is
+specialized to copy contiguous regions of memory.
+</item>
+            <item id="uid31">When <m:math><m:mrow><m:mfenced open="|" close="|"><m:mi mathvariant="bold">V</m:mi></m:mfenced><m:mo>=</m:mo><m:mn>2</m:mn></m:mrow></m:math>, <m:math><m:mrow><m:mi mathvariant="bold">I</m:mi><m:mo>=</m:mo><m:mi mathvariant="bold">O</m:mi></m:mrow></m:math>, and the strides
+denote a matrix-transposition problem, FFTW creates a plan
+that transposes the array in-place. FFTW implements the
+square transposition
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo><m:mo>,</m:mo><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math> by means of the
+cache-oblivious algorithm from <link target-id="bid34"/>, which is fast
+and, in theory, uses the cache optimally regardless of the cache
+size (using principles similar to those described in the section <link target-id="uid9">"FFTs and the Memory Hierarchy"</link>). A generalization of this idea is employed for non-square
+transpositions with a large common factor or a small difference
+between the dimensions, adapting algorithms from
+<link target-id="bid41"/>.
+</item>
+          </list>
+        </section>
+        <section id="uid32">
+          <title>Rank-1 plans</title>
+          <para id="id2262846">Rank-1 DFT problems denote ordinary one-dimensional Fourier
+transforms. FFTW deals with most rank-1 problems as follows.</para>
+          <section id="uid33">
+            <title>Direct plans</title>
+            <para id="id2262858">When the DFT rank-1 problem is “small enough” (usually, <m:math><m:mrow><m:mi>n</m:mi><m:mo>≤</m:mo><m:mn>64</m:mn></m:mrow></m:math>), FFTW produces a <emphasis>direct plan</emphasis> that solves the
+problem directly. These plans operate by calling a fragment of C code
+(a <emphasis>codelet</emphasis>) specialized to solve problems of one particular
+size, whose generation is described in <link target-id="uid41">"Generating Small FFT Kernels"</link>. More
+precisely, the codelets compute a loop (<m:math><m:mrow><m:mfenced open="|" close="|"><m:mi mathvariant="bold">V</m:mi></m:mfenced><m:mo>≤</m:mo><m:mn>1</m:mn></m:mrow></m:math>) of
+small DFTs.</para>
+          </section>
+          <section id="uid34">
+            <title>Cooley-Tukey plans</title>
+            <para id="id2262931">For problems of the form
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math> where
+<m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mi>r</m:mi><m:mi>m</m:mi></m:mrow></m:math>, FFTW generates a plan that implements a
+radix-<m:math><m:mi>r</m:mi></m:math> Cooley-Tukey algorithm <link target-id="uid5">"Review of the Cooley-Tukey FFT"</link>.
+Both decimation-in-time and decimation-in-frequency plans are supported, with both small fixed radices (usually, <m:math><m:mrow><m:mi>r</m:mi><m:mo>≤</m:mo><m:mn>64</m:mn></m:mrow></m:math>) produced by the codelet generator <link target-id="uid41">"Generating Small FFT Kernels"</link> and also arbitrary radices (e.g. radix-<m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math>).</para>
+            <para id="id2263060">The most common case is a <term>decimation in time</term> (<term>DIT</term>) plan, corresponding to a
+<term>radix</term> <m:math><m:mrow><m:mi>r</m:mi><m:mo>=</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:mrow></m:math> (and thus <m:math><m:mrow><m:mi>m</m:mi><m:mo>=</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math>) in the notation of <link target-id="uid5">"Review of the Cooley-Tukey FFT"</link>: it first solves
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>,</m:mo><m:mi>r</m:mi><m:mo>·</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>∪</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>r</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>m</m:mi><m:mo>·</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>,
+then multiplies the output array <m:math><m:mi mathvariant="bold">O</m:mi></m:math> by the twiddle factors, and
+finally solves
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>r</m:mi><m:mo>,</m:mo><m:mi>m</m:mi><m:mo>·</m:mo><m:mi>o</m:mi><m:mo>,</m:mo><m:mi>m</m:mi><m:mo>·</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>∪</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>. For
+performance, the last two steps are not planned independently, but are
+fused together in a single “twiddle” codelet—a fragment of C code
+that multiplies its input by the twiddle factors and performs a DFT
+of size <m:math><m:mi>r</m:mi></m:math>, operating in-place on <m:math><m:mi mathvariant="bold">O</m:mi></m:math>.</para>
+          </section>
+        </section>
+        <section id="uid35">
+          <title>Plans for higher vector ranks</title>
+          <para id="id2263354">These plans extract a vector loop to reduce a DFT problem to a
+problem of lower vector rank, which is then solved recursively. Any
+of the vector loops of <m:math><m:mi mathvariant="bold">V</m:mi></m:math> could be extracted in this way, leading
+to a number of possible plans corresponding to different loop
+orderings.</para>
+          <para id="id2263373">Formally, to solve <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>, where
+<m:math><m:mrow><m:mi mathvariant="bold">V</m:mi><m:mo>=</m:mo><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mfenced><m:mo>∪</m:mo><m:msub><m:mi mathvariant="bold">V</m:mi><m:mn>1</m:mn></m:msub></m:mrow></m:math>, FFTW
+generates a loop that, for all <m:math><m:mi>k</m:mi></m:math> such that <m:math><m:mrow><m:mn>0</m:mn><m:mo>≤</m:mo><m:mi>k</m:mi><m:mo>&lt;</m:mo><m:mi>n</m:mi></m:mrow></m:math>,
+invokes a plan for
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:msub><m:mi mathvariant="bold">V</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>+</m:mo><m:mi>k</m:mi><m:mo>·</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>+</m:mo><m:mi>k</m:mi><m:mo>·</m:mo><m:mi>o</m:mi><m:mo>)</m:mo></m:mrow></m:math>.</para>
+        </section>
+        <section id="uid36">
+          <title>Indirect plans</title>
+          <para id="id2263567">Indirect plans transform a DFT problem that requires some data
+shuffling (or discontiguous operation) into a problem that requires no
+shuffling plus a rank-0 problem that performs the shuffling.</para>
+          <para id="id2263574">Formally, to solve <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math> where
+<m:math><m:mrow><m:mfenced open="|" close="|"><m:mi mathvariant="bold">N</m:mi></m:mfenced><m:mo>&gt;</m:mo><m:mn>0</m:mn></m:mrow></m:math>, FFTW generates a plan that first solves
+<m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mfenced separators="" open="{" close="}"/><m:mo>,</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>∪</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">I</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>, and then
+solves <m:math><m:mrow><m:mo form="prefix">dft</m:mo><m:mo>(</m:mo><m:mo form="prefix">copy-o</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">N</m:mi><m:mo>)</m:mo><m:mo>,</m:mo><m:mo form="prefix">copy-o</m:mo><m:mo>(</m:mo><m:mi mathvariant="bold">V</m:mi><m:mo>)</m:mo><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>,</m:mo><m:mi mathvariant="bold">O</m:mi><m:mo>)</m:mo></m:mrow></m:math>. Here
+we define <m:math><m:mrow><m:mo form="prefix">copy-o</m:mo><m:mo>(</m:mo><m:mi>t</m:mi><m:mo>)</m:mo></m:mrow></m:math> to be the I/O tensor
+<m:math><m:mfenced separators="" open="{" close="}"><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo><m:mo>∣</m:mo><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>,</m:mo><m:mi>ι</m:mi><m:mo>,</m:mo><m:mi>o</m:mi><m:mo>)</m:mo><m:mo>∈</m:mo><m:mi>t</m:mi></m:mfenced></m:math>: that is, it replaces the input
+strides with the output strides. Thus, an indirect plan first
+rearranges/copies the data to the output, then solves the problem in
+place.</para>
+        </section>
+        <section id="uid37">
+          <title>Plans for prime sizes</title>
+          <para id="id2263833">As discussed in <link target-id="uid47">"Goals and Background of the FFTW Project"</link>, it turns out to be surprisingly
+useful to be able to handle large prime <m:math><m:mi>n</m:mi></m:math> (or large prime factors).
+<emphasis>Rader plans</emphasis> implement the algorithm from
+<link target-id="bid31"/>
+to compute one-dimensional DFTs of prime size in <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+time. <emphasis>Bluestein plans</emphasis> implement Bluestein's “chirp-z”
+algorithm, which can also handle prime <m:math><m:mi>n</m:mi></m:math> in <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>
+time <link target-id="bid32"/>, <link target-id="bid33"/>, <link target-id="bid30"/>. <emphasis>Generic plans</emphasis>
+implement a naive <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>)</m:mo></m:mrow></m:math> algorithm (useful for <m:math><m:mrow><m:mi>n</m:mi><m:mo>≲</m:mo><m:mn>100</m:mn></m:mrow></m:math>).</para>
+        </section>
+        <section id="uid38">
+          <title>Discussion</title>
+          <para id="id2263996">Although it may not be immediately apparent, the combination of the
+recursive rules in <link target-id="uid28">"The space of plans in FFTW"</link> can produce a number of
+useful algorithms. To illustrate these compositions, we discuss three particular issues: depth- vs. breadth-first, loop reordering,
+and in-place transforms.</para>
+          <figure id="uid39" orient="horizontal"><media id="id10430768" alt="Two descriptions of size-30 DFT, one depth-first, and one breadth-first."><image src="../../media/figure4alt.png" mime-type="image/png" width="500" print-width="3in"/></media><caption>Two possible decompositions for a size-30 DFT, both for the
+arbitrary choice of DIT radices 3 then 2 then 5, and prime-size
+codelets.  Items grouped by a "<m:math><m:mrow><m:mo>{</m:mo></m:mrow></m:math>" result from the plan for a
+single sub-problem.  In the depth-first case, the vector rank was
+reduced to zero as per <link target-id="uid35">"Plans for higher vector ranks"</link> before decomposing
+sub-problems, and vice-versa in the breadth-first case.</caption></figure>
+          <para id="id2264017">As discussed previously in sections <link target-id="uid5">"Review of the Cooley-Tukey FFT"</link> and <link target-id="uid12">"Understanding FFTs with an ideal cache"</link>, the same
+Cooley-Tukey decomposition can be executed in either traditional
+breadth-first order or in recursive depth-first order, where the
+latter has some theoretical cache advantages. FFTW is explicitly
+recursive, and thus it can naturally employ a depth-first order.
+Because its sub-problems contain a vector loop that can be executed in
+a variety of orders, however, FFTW can also employ breadth-first
+traversal. In particular, a 1d algorithm resembling the
+traditional breadth-first Cooley-Tukey would result from applying
+<link target-id="uid34">"Cooley-Tukey plans"</link> to completely factorize the problem
+size before applying the loop rule <link target-id="uid35">"Plans for higher vector ranks"</link> to reduce
+the vector ranks, whereas depth-first traversal would result from
+applying the loop rule before factorizing each subtransform. These
+two possibilities are illustrated by an example in <link target-id="uid39"/>.</para>
+          <para id="id2264068">Another example of the effect of loop reordering is a style of plan
+that we sometimes call <emphasis>vector recursion</emphasis> (unrelated to
+“vector-radix” FFTs <link target-id="bid1"/>). The basic idea is that,
+if one has a loop (vector-rank 1) of transforms, where the vector
+stride is smaller than the transform size, it is advantageous to push
+the loop towards the leaves of the transform decomposition, while
+otherwise maintaining recursive depth-first ordering, rather than
+looping “outside” the transform; i.e., apply the usual FFT to
+“vectors” rather than numbers. Limited forms of this idea have
+appeared for computing multiple FFTs on vector processors (where
+the loop in question maps directly to a hardware
+vector) <link target-id="bid25"/>. For example, Cooley-Tukey
+produces a unit <emphasis>input</emphasis>-stride vector loop at the top-level
+DIT decomposition, but with a large <emphasis>output</emphasis> stride; this
+difference in strides makes it non-obvious whether vector recursion is
+advantageous for the sub-problem, but for large transforms we often
+observe the planner to choose this possibility.</para>
+          <para id="id2264126">In-place 1d transforms (with no separate bit reversal pass) can
+be obtained as follows by a combination DIT and DIF plans
+<link target-id="uid34">"Cooley-Tukey plans"</link> with transposes
+<link target-id="uid29">"Rank-0 plans"</link>. First, the transform is decomposed via a
+radix-<m:math><m:mi>p</m:mi></m:math> DIT plan into a vector of <m:math><m:mi>p</m:mi></m:math> transforms of size <m:math><m:mrow><m:mi>q</m:mi><m:mi>m</m:mi></m:mrow></m:math>,
+then these are decomposed in turn by a radix-<m:math><m:mi>q</m:mi></m:math> DIF plan into a
+vector (rank 2) of <m:math><m:mrow><m:mi>p</m:mi><m:mo>×</m:mo><m:mi>q</m:mi></m:mrow></m:math> transforms of size <m:math><m:mi>m</m:mi></m:math>. These
+transforms of size <m:math><m:mi>m</m:mi></m:math> have input and output at different
+places/strides in the original array, and so cannot be solved
+independently. Instead, an indirect plan <link target-id="uid36">"Indirect plans"</link>
+is used to express the sub-problem as <m:math><m:mrow><m:mi>p</m:mi><m:mi>q</m:mi></m:mrow></m:math> in-place transforms of size
+<m:math><m:mi>m</m:mi></m:math>, followed or preceded by an <m:math><m:mrow><m:mi>m</m:mi><m:mo>×</m:mo><m:mi>p</m:mi><m:mo>×</m:mo><m:mi>q</m:mi></m:mrow></m:math> rank-0
+transform. The latter sub-problem is easily seen to be <m:math><m:mi>m</m:mi></m:math> in-place
+<m:math><m:mrow><m:mi>p</m:mi><m:mo>×</m:mo><m:mi>q</m:mi></m:mrow></m:math> transposes (ideally square, i.e. <m:math><m:mrow><m:mi>p</m:mi><m:mo>=</m:mo><m:mi>q</m:mi></m:mrow></m:math>). Related
+strategies for in-place transforms based on small transposes were
+described in <link target-id="bid26"/>, <link target-id="bid27"/>, <link target-id="bid28"/>, <link target-id="bid29"/>;
+alternating DIT/DIF, without concern for in-place operation, was
+also considered in <link target-id="bid42"/>, <link target-id="bid43"/>.</para>
+        </section>
+      </section>
+      <section id="uid40">
+        <title>The FFTW planner</title>
+        <para id="id2264358">Given a problem and a set of possible plans, the basic principle
+behind the FFTW planner is straightforward: construct a plan for
+each applicable algorithmic step, time the execution of these plans,
+and select the fastest one. Each algorithmic step may break the
+problem into subproblems, and the fastest plan for each subproblem is
+constructed in the same way. These timing measurements can either be
+performed at runtime, or alternatively the plans for a given set of
+sizes can be precomputed and loaded at a later time.</para>
+        <para id="id2264370">A direct implementation of this approach, however, faces an
+exponential explosion of the number of possible plans, and hence of
+the planning time, as <m:math><m:mi>n</m:mi></m:math> increases. In order to reduce the planning
+time to a manageable level, we employ several heuristics to reduce the
+space of possible plans that must be compared. The most important of
+these heuristics is <term>dynamic programming</term> <link target-id="bid44"/>: it optimizes each sub-problem locally,
+independently of the larger context (so that the “best” plan for a
+given sub-problem is re-used whenever that sub-problem is
+encountered). Dynamic programming is not guaranteed to find the
+fastest plan, because the performance of plans is context-dependent on
+real machines (e.g., the contents of the cache depend on the preceding
+computations); however, this approximation works reasonably well in
+practice and greatly reduces the planning time. Other approximations,
+such as restrictions on the types of loop-reorderings that are
+considered <link target-id="uid35">"Plans for higher vector ranks"</link>, are described in
+<link target-id="bid16"/>.</para>
+        <para id="id2264425">Alternatively, there is an <term>estimate mode</term> that performs no
+timing measurements whatsoever, but instead minimizes a heuristic cost
+function. This can reduce the planner time by several orders of
+magnitude, but with a significant penalty observed in plan efficiency;
+e.g., a penalty of 20% is typical for moderate <m:math><m:mrow><m:mi>n</m:mi><m:mo>≲</m:mo><m:msup><m:mn>2</m:mn><m:mn>13</m:mn></m:msup></m:mrow></m:math>,
+whereas a factor of 2–3 can be suffered for large <m:math><m:mrow><m:mi>n</m:mi><m:mo>≳</m:mo><m:msup><m:mn>2</m:mn><m:mn>16</m:mn></m:msup></m:mrow></m:math> <link target-id="bid16"/>. Coming up with a better heuristic plan is an
+interesting open research question; one difficulty is that, because
+FFT algorithms depend on factorization, knowing a good plan for <m:math><m:mi>n</m:mi></m:math>
+does not immediately help one find a good plan for nearby <m:math><m:mi>n</m:mi></m:math>.</para>
+      </section>
+    </section>
+    <section id="uid41">
+      <title>Generating Small FFT Kernels</title>
+      <para id="id2264517">The base cases of FFTW's recursive plans are its <term>codelets</term>, and
+these form a critical component of FFTW's performance. They
+consist of long blocks of highly optimized, straight-line code,
+implementing many special cases of the DFT that give the planner a
+large space of plans in which to optimize. Not only was it
+impractical to write numerous codelets by hand, but we also needed to
+rewrite them many times in order to explore different algorithms and
+optimizations. Thus, we designed a special-purpose “FFT
+compiler” called <term>genfft</term> that produces the codelets
+automatically from an abstract description. genfft
+ is summarized in this section and described in more detail by <link target-id="bid37"/>.</para>
+      <para id="id2255402">A typical codelet in FFTW computes a DFT of a small, fixed size
+<m:math><m:mi>n</m:mi></m:math> (usually, <m:math><m:mrow><m:mi>n</m:mi><m:mo>≤</m:mo><m:mn>64</m:mn></m:mrow></m:math>), possibly with the input or output
+multiplied by twiddle factors <link target-id="uid34">"Cooley-Tukey plans"</link>.
+Several other kinds of codelets can be produced by genfft
+, but we
+will focus here on this common case.</para>
+      <para id="id2255444">In principle, all codelets implement some combination of the
+Cooley-Tukey algorithm from <link target-id="uid7"/> and/or some other DFT
+algorithm expressed by a similarly compact formula. However, a high-performance implementation of the DFT must address many more
+concerns than <link target-id="uid7"/> alone suggests. For example, <link target-id="uid7"/>
+contains multiplications by 1 that are more efficient to
+omit. <link target-id="uid7"/> entails a run-time factorization of <m:math><m:mi>n</m:mi></m:math>, which can be
+precomputed if <m:math><m:mi>n</m:mi></m:math> is known in advance. <link target-id="uid7"/> operates on complex
+numbers, but breaking the complex-number abstraction into real and
+imaginary components turns out to expose certain non-obvious
+optimizations. Additionally, to exploit the long pipelines in current
+processors, the recursion implicit in <link target-id="uid7"/> should be unrolled and
+re-ordered to a significant degree. Many further optimizations are
+possible if the complex input is known in advance to be purely real
+(or imaginary). Our design goal for genfft
+ was to keep the
+expression of the DFT algorithm independent of such
+concerns. This separation allowed us to experiment with various
+DFT algorithms and implementation strategies independently and
+without (much) tedious rewriting.</para>
+      <para id="id2264826">genfft
+ is structured as a compiler whose input consists of the kind
+and size of the desired codelet, and whose output is C code.
+genfft
+ operates in four phases: creation, simplification,
+scheduling, and unparsing.</para>
+      <para id="id2264844">In the <term>creation</term> phase, genfft
+ produces a representation of
+the codelet in the form of a directed acyclic graph (<term>dag</term>). The dag is
+produced according to well-known DFT algorithms: Cooley-Tukey
+<link target-id="uid7"/>, prime-factor <link target-id="bid30"/>,
+split-radix <link target-id="bid6"/>, <link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>, <link target-id="bid1"/>,
+and Rader <link target-id="bid31"/>. Each algorithm is expressed in a
+straightforward math-like notation, using complex numbers, with no
+attempt at optimization. Unlike a normal FFT implementation,
+however, the algorithms here are evaluated symbolically and the
+resulting symbolic expression is represented as a dag, and in
+particular it can be viewed as a <term>linear
+network</term> <link target-id="bid45"/> (in which the edges represent
+multiplication by constants and the vertices represent additions of
+the incoming edges).</para>
+      <para id="id2264929">In the <term>simplification</term> phase, genfft
+ applies local
+rewriting rules to each node of the dag in order to simplify it. This
+phase performs algebraic transformations (such as eliminating
+multiplications by 1) and common-subexpression elimination.
+Although such transformations can be performed by a conventional
+compiler to some degree, they can be carried out here to a greater
+extent because genfft
+ can exploit the specific problem domain. For
+example, two equivalent subexpressions can always be detected, even if
+the subexpressions are written in algebraically different forms,
+because all subexpressions compute linear functions. Also, genfft
+can exploit the property that <term>network transposition</term>
+(reversing the direction of every edge) computes the transposed linear
+operation <link target-id="bid45"/>, in order to transpose the network,
+simplify, and then transpose back—this turns out to expose
+additional common subexpressions <link target-id="bid37"/>. In total, these
+simplifications are sufficiently powerful to derive DFT algorithms
+specialized for real and/or symmetric data automatically from the
+complex algorithms. For example, it is known that when the input of a
+DFT is real (and the output is hence conjugate-symmetric), one can
+save a little over a factor of two in arithmetic cost by specializing
+FFT algorithms for this case—with genfft
+, this specialization
+can be done entirely automatically, pruning the redundant operations
+from the dag, to match the lowest known operation count for a
+real-input FFT starting only from the complex-data
+algorithm <link target-id="bid37"/>, <link target-id="bid10"/>. We take advantage of this
+property to help us implement real-data DFTs <link target-id="bid37"/>, <link target-id="bid16"/>,
+to exploit machine-specific “SIMD” instructions
+<link target-id="uid43">"SIMD instructions"</link> <link target-id="bid16"/>, and to generate codelets for the
+discrete cosine (DCT) and sine (DST) transforms <link target-id="bid37"/>, <link target-id="bid10"/>.
+Furthermore, by experimentation we have discovered additional
+simplifications that improve the speed of the generated code. One
+interesting example is the elimination of negative constants <link target-id="bid37"/>:
+multiplicative constants in FFT algorithms often come in
+positive/negative pairs, but every C compiler we are aware of will
+generate separate load instructions for positive and negative versions
+of the same constants.<footnote id="id10431932">Floating-point constants must be
+stored explicitly in memory; they cannot be embedded directly into the
+CPU instructions like integer “immediate” constants.</footnote> We thus
+obtained a 10–15% speedup by making all constants positive, which
+involves propagating minus signs to change additions into subtractions
+or vice versa elsewhere in the dag (a daunting task if it had to be
+done manually for tens of thousands of lines of code).</para>
+      <para id="id2265114">In the <term>scheduling</term> phase, genfft
+ produces a topological
+sort of the dag (a <term>schedule</term>). The goal of this phase is to find a
+schedule such that a C compiler can subsequently perform a good
+register allocation. The scheduling algorithm used by genfft
+
+offers certain theoretical guarantees because it has its foundations
+in the theory of cache-oblivious algorithms <link target-id="bid34"/> (here,
+the registers are viewed as a form of cache), as described in
+<link target-id="uid22">"Memory strategies in FFTW"</link>. As a practical matter, one consequence of this
+scheduler is that FFTW's machine-independent codelets are no slower
+than machine-specific codelets generated by SPIRAL
+<link target-id="bid38"/>.</para>
+      <para id="id2265168">In the stock genfft
+ implementation, the schedule is finally
+unparsed to C. A variation from <link target-id="bid46"/> implements the
+rest of a compiler back end and outputs assembly code.</para>
+      <section id="uid43">
+        <title>SIMD instructions</title>
+        <para id="id2265194">Unfortunately, it is impossible to attain nearly peak performance on
+current popular processors while using only portable C code. Instead,
+a significant portion of the available computing power can only be
+accessed by using specialized SIMD (single-instruction multiple data)
+instructions, which perform the same operation in parallel on a data
+vector. For example, all modern “x86” processors can execute
+arithmetic instructions on “vectors” of four single-precision values
+(SSE instructions) or two double-precision values (SSE2 instructions)
+at a time, assuming that the operands are arranged consecutively in
+memory and satisfy a 16-byte alignment constraint. Fortunately,
+because nearly all of FFTW's low-level code is produced by
+genfft
+, machine-specific instructions could be exploited by
+modifying the generator—the improvements are then automatically
+propagated to all of FFTW's codelets, and in particular are not
+limited to a small set of sizes such as powers of two.</para>
+        <para id="id2265223">SIMD instructions are superficially similar to “vector processors”,
+which are designed to perform the same operation in parallel on an all
+elements of a data array (a “vector”). The performance of
+“traditional” vector processors was best for long vectors that are
+stored in contiguous memory locations, and special algorithms were
+developed to implement the DFT efficiently on this kind of
+hardware <link target-id="bid25"/>, <link target-id="bid29"/>. Unlike in vector
+processors, however, the SIMD vector length is small and fixed
+(usually 2 or 4). Because microprocessors depend on caches for
+performance, one cannot naively use SIMD instructions to simulate a
+long-vector algorithm: while on vector machines long vectors generally
+yield better performance, the performance of a microprocessor drops as
+soon as the data vectors exceed the capacity of the cache.
+Consequently, SIMD instructions are better seen as a restricted form
+of instruction-level parallelism than as a degenerate flavor of vector
+parallelism, and different DFT algorithms are required.</para>
+        <para id="id2265262">The technique used to exploit SIMD instructions in genfft
+ is most
+easily understood for vectors of length two (e.g., SSE2). In this case, we view a <emphasis>complex</emphasis> DFT as a pair of <emphasis>real</emphasis> DFTs:</para>
+        <equation id="uid44">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mtext>DFT</m:mtext>
+              <m:mo>(</m:mo>
+              <m:mi>A</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>i</m:mi>
+              <m:mo>·</m:mo>
+              <m:mi>B</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mtext>DFT</m:mtext>
+              <m:mo>(</m:mo>
+              <m:mi>A</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>+</m:mo>
+              <m:mi>i</m:mi>
+              <m:mo>·</m:mo>
+              <m:mtext>DFT</m:mtext>
+              <m:mo>(</m:mo>
+              <m:mi>B</m:mi>
+              <m:mo>)</m:mo>
+              <m:mspace width="4pt"/>
+              <m:mo>,</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2265347">where <m:math><m:mi>A</m:mi></m:math> and <m:math><m:mi>B</m:mi></m:math> are two real arrays. Our algorithm computes the two
+real DFTs in parallel using SIMD instructions, and then it combines
+the two outputs according to <link target-id="uid44"/>. This SIMD algorithm
+has two important properties. First, if the data is stored as an
+array of complex numbers, as opposed to two separate real and
+imaginary arrays, the SIMD loads and stores always operate on
+correctly-aligned contiguous locations, even if the the complex
+numbers themselves have a non-unit stride. Second, because the
+algorithm finds two-way parallelism in the real and imaginary parts of
+a single DFT (as opposed to performing two DFTs in parallel), we
+can completely parallelize DFTs of any size, not just even sizes or
+powers of 2.</para>
+      </section>
+    </section>
+    <section id="uid45">
+      <title>Numerical Accuracy in FFTs</title>
+      <para id="id2265407">An important consideration in the implementation of any practical
+numerical algorithm is numerical accuracy: how quickly do
+floating-point roundoff errors accumulate in the course of the
+computation? Fortunately, FFT algorithms for the most part have
+remarkably good accuracy characteristics. In particular, for a DFT
+of length <m:math><m:mi>n</m:mi></m:math> computed by a Cooley-Tukey algorithm with finite-precision floating-point arithmetic, the
+<emphasis>worst-case</emphasis> error growth is <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid20"/>, <link target-id="bid47"/>
+and the mean error growth for random inputs is only <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msqrt><m:mrow><m:mo form="prefix">log</m:mo><m:mi>n</m:mi></m:mrow></m:msqrt><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid48"/>, <link target-id="bid47"/>. This is so good that, in practical
+applications, a properly implemented FFT will rarely be a
+significant contributor to the numerical error.</para>
+      <para id="element-503">The amazingly small roundoff errors of FFT algorithms are sometimes explained incorrectly as simply a consequence of the reduced number of operations: since there are fewer operations compared to a naive <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo>
+<m:msup><m:mrow><m:mi>n</m:mi></m:mrow><m:mrow><m:mn>2</m:mn></m:mrow>
+</m:msup><m:mo>)</m:mo></m:mrow></m:math> algorithm, the argument goes, there is less accumulation of roundoff error.  The real reason, however, is more subtle than that, and has to do with the <emphasis>ordering</emphasis> of the operations rather than their number.  For example, consider the computation of only the output <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math> in the radix-2 algorithm of <link target-id="element-948"/>, ignoring all of the other outputs of the FFT.  <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math> is the sum of all of the inputs, requiring <m:math><m:mrow><m:mi>n</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>
+additions.  The FFT does not change this requirement, it merely changes the order of the additions so as to re-use some of them for other outputs.  In particular, this radix-2 DIT FFT computes <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math> as follows: it first sums the even-indexed inputs, then sums the odd-indexed inputs, then adds the two sums; the even- and odd-indexed inputs are summed recursively by the same procedure.  This process is sometimes called <term>cascade summation</term>, and even though it still requires <m:math><m:mrow><m:mi>n</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math> total additions to compute <m:math><m:mrow><m:mi>Y</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math> by itself, its roundoff error grows much more slowly than simply adding <m:math><m:mrow><m:mi>X</m:mi><m:mo>[</m:mo><m:mn>0</m:mn><m:mo>]</m:mo></m:mrow></m:math>, <m:math><m:mrow><m:mi>X</m:mi><m:mo>[</m:mo><m:mn>1</m:mn><m:mo>]</m:mo></m:mrow></m:math>, <m:math><m:mrow><m:mi>X</m:mi><m:mo>[</m:mo><m:mn>2</m:mn><m:mo>]</m:mo></m:mrow></m:math> and so on in sequence.  Specifically, the roundoff error when adding up <m:math>
+<m:mrow><m:mi>n</m:mi></m:mrow></m:math> floating-point numbers in sequence grows as <m:math>
+<m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> in the worst case, or as <m:math>
+<m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msqrt><m:mrow><m:mi>n</m:mi></m:mrow></m:msqrt><m:mo>)</m:mo></m:mrow></m:math> on average for random inputs (where the errors grow according to a random walk), but simply reordering these n-1 additions into a cascade summation yields <m:math>
+<m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>log</m:mi><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> worst-case and <m:math>
+<m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msqrt><m:mrow><m:mi>log</m:mi><m:mi>n</m:mi></m:mrow></m:msqrt><m:mo>)</m:mo></m:mrow></m:math>
+ average-case error growth <link target-id="bid56"/>.</para><para id="id2265501">However, these encouraging error-growth rates <emphasis>only</emphasis> apply if the
+trigonometric “twiddle” factors in the FFT algorithm are computed
+very accurately. Many FFT implementations, including
+FFTW and common manufacturer-optimized libraries, therefore use
+precomputed tables of twiddle factors calculated by means of standard
+library functions (which compute trigonometric constants to roughly
+machine precision). The other common method to compute twiddle
+factors is to use a trigonometric recurrence formula—this saves
+memory (and cache), but almost all recurrences have errors that grow
+as <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msqrt><m:mi>n</m:mi></m:msqrt><m:mo>)</m:mo></m:mrow></m:math>, <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math>, or even <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid49"/>, which lead to
+corresponding errors in the FFT. For example, one simple
+recurrence is <m:math><m:mrow><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mo>(</m:mo><m:mi>k</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mi>θ</m:mi></m:mrow></m:msup><m:mo>=</m:mo><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>k</m:mi><m:mi>θ</m:mi></m:mrow></m:msup><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>θ</m:mi></m:mrow></m:msup></m:mrow></m:math>,
+multiplying repeatedly by <m:math><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>θ</m:mi></m:mrow></m:msup></m:math> to obtain a sequence of
+equally spaced angles, but the errors when using this process grow as <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid49"/>. A common improved recurrence is <m:math><m:mrow><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mo>(</m:mo><m:mi>k</m:mi><m:mo>+</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mi>θ</m:mi></m:mrow></m:msup><m:mo>=</m:mo><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>k</m:mi><m:mi>θ</m:mi></m:mrow></m:msup><m:mo>+</m:mo><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>k</m:mi><m:mi>θ</m:mi></m:mrow></m:msup><m:mrow><m:mo>(</m:mo><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>θ</m:mi></m:mrow></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math>, where the small
+quantity<footnote id="id10432947">In an FFT, the twiddle factors are powers of
+<m:math><m:msub><m:mi>ω</m:mi><m:mi>n</m:mi></m:msub></m:math>, so <m:math><m:mi>θ</m:mi></m:math> is a small angle proportional to <m:math><m:mrow><m:mn>1</m:mn><m:mo>/</m:mo><m:mi>n</m:mi></m:mrow></m:math> and
+<m:math><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>θ</m:mi></m:mrow></m:msup></m:math> is close to 1.</footnote> <m:math><m:mrow><m:msup><m:mi>e</m:mi><m:mrow><m:mi>i</m:mi><m:mi>θ</m:mi></m:mrow></m:msup><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>=</m:mo><m:mo form="prefix">cos</m:mo><m:mrow><m:mo>(</m:mo><m:mi>θ</m:mi><m:mo>)</m:mo></m:mrow><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>+</m:mo><m:mi>i</m:mi><m:mo form="prefix">sin</m:mo><m:mrow><m:mo>(</m:mo><m:mi>θ</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math> is computed using <m:math><m:mrow><m:mo form="prefix">cos</m:mo><m:mrow><m:mo>(</m:mo><m:mi>θ</m:mi><m:mo>)</m:mo></m:mrow><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>=</m:mo><m:mo>-</m:mo><m:mn>2</m:mn><m:msup><m:mo form="prefix">sin</m:mo><m:mn>2</m:mn></m:msup><m:mrow><m:mo>(</m:mo><m:mi>θ</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>)</m:mo></m:mrow></m:mrow></m:math> <link target-id="bid22"/>; unfortunately, the error using
+this method still grows as <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:msqrt><m:mi>n</m:mi></m:msqrt><m:mo>)</m:mo></m:mrow></m:math> <link target-id="bid49"/>, far worse than
+logarithmic.</para>
+      <para id="id2265971">There are, in fact, trigonometric recurrences with the same
+logarithmic error growth as the FFT, but these seem more difficult
+to implement efficiently; they require that a table of <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> values be stored and updated as the recurrence
+progresses <link target-id="bid50"/>, <link target-id="bid49"/>. Instead, in order to gain at
+least some of the benefits of a trigonometric recurrence (reduced
+memory pressure at the expense of more arithmetic), FFTW includes
+several ways to compute a much smaller twiddle table, from which the
+desired entries can be computed accurately on the fly using a bounded
+number (usually <m:math><m:mrow><m:mo>&lt;</m:mo><m:mn>3</m:mn></m:mrow></m:math>) of complex multiplications. For example,
+instead of a twiddle table with <m:math><m:mi>n</m:mi></m:math> entries <m:math><m:msubsup><m:mi>ω</m:mi><m:mi>n</m:mi><m:mi>k</m:mi></m:msubsup></m:math>, FFTW can
+use two tables with <m:math><m:mrow><m:mi>Θ</m:mi><m:mo>(</m:mo><m:msqrt><m:mi>n</m:mi></m:msqrt><m:mo>)</m:mo></m:mrow></m:math> entries each, so that
+<m:math><m:msubsup><m:mi>ω</m:mi><m:mi>n</m:mi><m:mi>k</m:mi></m:msubsup></m:math> is computed by multiplying an entry in one table (indexed
+with the low-order bits of <m:math><m:mi>k</m:mi></m:math>) by an entry in the other table
+(indexed with the high-order bits of <m:math><m:mi>k</m:mi></m:math>).</para>
+      <para id="id2266114">There are a few non-Cooley-Tukey algorithms that are known to have
+worse error characteristics, such as the “real-factor”
+algorithm <link target-id="bid51"/>, <link target-id="bid1"/>, but these are rarely used in
+practice (and are not used at all in FFTW). On the other hand,
+some commonly used algorithms for type-I and type-IV discrete cosine
+transforms <link target-id="bid25"/>, <link target-id="bid17"/>, <link target-id="bid52"/> have errors
+that we observed to grow as <m:math><m:msqrt><m:mi>n</m:mi></m:msqrt></m:math> even for accurate trigonometric
+constants (although we are not aware of any theoretical error analysis
+of these algorithms), and thus we were forced to use alternative
+algorithms <link target-id="bid16"/>.</para>
+      <para id="id2266178">To measure the accuracy of FFTW, we compare against a slow FFT
+implemented in arbitrary-precision arithmetic, while to verify the
+correctness we have found the <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo form="prefix">log</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> self-test algorithm of
+<link target-id="bid53"/>
+very useful.</para>
+    </section>
+    <section id="uid53">
+      <title>Concluding Remarks</title>
+      <para id="id2266704">It is unlikely that many readers of this chapter will ever have to
+implement their own fast Fourier transform software, except as a
+learning exercise. The computation of the DFT, much like basic
+linear algebra or integration of ordinary differential equations, is
+so central to numerical computing and so well-established that robust,
+flexible, highly optimized libraries are widely available, for the
+most part as free/open-source software. And yet there are many other
+problems for which the algorithms are not so finalized, or for which
+algorithms are published but the implementations are unavailable or of
+poor quality. Whatever new problems one comes across, there
+is a good chance that the chasm between theory and efficient
+implementation will be just as large as it is for FFTs, unless
+computers become much simpler in the future. For readers who
+encounter such a problem, we hope that these lessons from FFTW will be
+useful:</para>
+      <list id="id2266723" list-type="bulleted">
+        <item id="uid54">Generality and portability should almost always come first.
+</item>
+        <item id="uid55">The number of operations, up to a constant factor, is less important than the order of operations.
+</item>
+        <item id="uid56">Recursive algorithms with large base cases make optimization easier.
+</item>
+        <item id="uid57">Optimization, like any tedious task, is best automated.
+</item>
+        <item id="uid58">Code generation reconciles high-level programming with low-level performance.
+</item>
+      </list>
+      <para id="id2266783">We should also mention one final lesson that we haven't discussed in
+this chapter: you can't optimize in a vacuum, or you end up
+congratulating yourself for making a slow program slightly faster.
+We started the FFTW project after downloading a dozen FFT
+implementations, benchmarking them on a few machines, and noting how
+the winners varied between machines and between transform sizes.
+Throughout FFTW's development, we continued to benefit from
+repeated benchmarks against the dozens of high-quality FFT programs
+available online, without which we would have thought FFTW was
+“complete” long ago.</para>
+    </section>
+    <section id="uid59">
+      <title>Acknowledgements</title>
+      <para id="id2266817">SGJ was supported in part by the Materials Research Science and
+Engineering Center program of the National Science Foundation under
+award DMR-9400334; MF was supported in part by the Defense Advanced
+Research Projects Agency (DARPA) under contract No. NBCH30390004. We
+are also grateful to Sidney Burrus for the opportunity to contribute
+this chapter, and for his continual encouragement—dating back to his
+first kind words in 1997 for the initial FFT efforts of two
+graduate students venturing outside their fields.</para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid55">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Anderson, E. and Bai, Z. and Bischof, C. and Blackford, S. and Demmel, J. and Dongarra, J. and Du Croz, J. and Greenbaum, A. and Hammarling, S. and McKenney, A. and Sorensen, D.</bib:author>
+        <bib:title>LAPACK Users' Guide</bib:title>
+        <bib:publisher>Society for Industrial and Applied Mathematics</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Philadelphia, PA</bib:address>
+        <bib:edition>3rd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid21">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bailey, D. H.</bib:author>
+        <bib:title>FFTs in External or Hierarchical Memory</bib:title>
+        <bib:journal>J. Supercomputing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>4</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>23–35</bib:pages>
+        <bib:month>May</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid35">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Belady, Laszlo A.</bib:author>
+        <bib:title>A study of replacement algorithms for virtual storage computers</bib:title>
+        <bib:journal>IBM Systems Journal</bib:journal>
+        <bib:year>1966</bib:year>
+<!--optional fields-->
+        <bib:volume>5</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>78-101</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid32">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bluestein, Leo I.</bib:author>
+        <bib:title>A linear filtering approach to the computation of the discrete Fourier transform</bib:title>
+        <bib:journal>Northeast Electronics Research and Eng. Meeting Record</bib:journal>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:volume>10</bib:volume>
+        <bib:number/>
+        <bib:pages>218–219</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid50">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Buneman, O.</bib:author>
+        <bib:title>Stable online creation of sines or cosines of successive angles</bib:title>
+        <bib:journal>Proc. IEEE</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>75</bib:volume>
+        <bib:number>10</bib:number>
+        <bib:pages>1434–1435</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid52">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Chan, S. C. and Ho, K. L.</bib:author>
+        <bib:title>Direct methods for computing discrete sinusoidal transforms</bib:title>
+        <bib:journal>IEE Proc. F</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>137</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>433–442</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid44">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Cormen, Thomas H. and Leiserson, Charles E. and Rivest, Ronald L.</bib:author>
+        <bib:title>Introduction to Algorithms</bib:title>
+        <bib:publisher>The MIT Press</bib:publisher>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Cambridge, Massachusetts</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid45">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Crochiere, Ronald E. and Oppenheim, Alan V.</bib:author>
+        <bib:title>Analysis of linear digital networks</bib:title>
+        <bib:journal>Proc. IEEE</bib:journal>
+        <bib:year>1975</bib:year>
+<!--optional fields-->
+        <bib:volume>63</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>581–595</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W. and Tukey, J. W.</bib:author>
+        <bib:title>An algorithm for the machine computation of the complex Fourier series</bib:title>
+        <bib:journal>Math. Computation</bib:journal>
+        <bib:year>1965</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>297–301</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Hollmann, H.</bib:author>
+        <bib:title>Split-radix FFT algorithm</bib:title>
+        <bib:journal>Electronics Lett.</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>14-16</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid41">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Dow, Murray</bib:author>
+        <bib:title>Transposing a matrix on a vector computer</bib:title>
+        <bib:journal>Parallel Computing</bib:journal>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume>21</bib:volume>
+        <bib:number>12</bib:number>
+        <bib:pages>1997-2005</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, Pierre</bib:author>
+        <bib:title>Algorithms meeting the lower bounds on the multiplicative complexity of length-<!--Math is not currently allowed within BibTeXML.--> DFTs and their connection with practical algorithms</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>38</bib:volume>
+        <bib:number>9</bib:number>
+        <bib:pages>1504-1511</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Vetterli, M.</bib:author>
+        <bib:title>Fast Fourier Transforms: a Tutorial Review and a State of the Art</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>259–299</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid53">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Ergün, Funda</bib:author>
+        <bib:title>Testing multivariate linear functions: Overcoming the generator bottleneck</bib:title>
+        <bib:booktitle>Proc. Twenty-Seventh Ann. ACM Symp. Theory of Computing</bib:booktitle>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>407–416</bib:pages>
+        <bib:address>Las Vegas, Nevada</bib:address>
+        <bib:month>June</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>The FFTW web page</bib:title>
+        <bib:howpublished>http://www.fftw.org/
+</bib:howpublished>
+        <bib:month/>
+        <bib:year>2003</bib:year>
+        <bib:note/>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>The Design and Implementation of FFTW3</bib:title>
+        <bib:journal>Proc. IEEE</bib:journal>
+        <bib:year>2005</bib:year>
+<!--optional fields-->
+        <bib:volume>93</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>216–231</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid39">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>FFTW: An Adaptive Software Architecture for the FFT</bib:title>
+        <bib:booktitle>Proc. IEEE Int'l Conf. Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>1381–1384</bib:pages>
+        <bib:address>Seattle, WA</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid46">
+      <bib:unpublished>
+<!--required fields-->
+        <bib:author>Franchetti, Franz and Kral, Stefan and Lorenz, Juergen and Ueberhuber, Christoph W.</bib:author>
+        <bib:title>Domain Specific Compiler Techniques</bib:title>
+        <bib:note>Manuscript in preparation</bib:note>
+<!--optional fields-->
+        <bib:month/>
+        <bib:year/>
+      </bib:unpublished>
+    </bib:entry>
+    <bib:entry id="bid34">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Leiserson, Charles E. and Prokop, Harald and Ramachandran, Sridhar</bib:author>
+        <bib:title>Cache-oblivious algorithms</bib:title>
+        <bib:booktitle>Proc. 40th Ann. Symp. Foundations of Computer Science (FOCS '99)</bib:booktitle>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages/>
+        <bib:address>New York, USA</bib:address>
+        <bib:month>October</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid37">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Frigo, Matteo</bib:author>
+        <bib:title>A Fast Fourier Transform Compiler</bib:title>
+        <bib:booktitle>Proc. ACM SIGPLAN'99 Conference on Programming Language Design and Implementation (PLDI)</bib:booktitle>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>34</bib:volume>
+        <bib:series/>
+        <bib:pages>169–180</bib:pages>
+        <bib:address>Atlanta, Georgia</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher>ACM</bib:publisher>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Gentleman, W. M. and Sande, G.</bib:author>
+        <bib:title>Fast Fourier transforms—for fun and profit</bib:title>
+        <bib:journal>Proc. AFIPS</bib:journal>
+        <bib:year>1966</bib:year>
+<!--optional fields-->
+        <bib:volume>29</bib:volume>
+        <bib:number/>
+        <bib:pages>563–578</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, Michael T. and Burrus, C. Sidney</bib:author>
+        <bib:title>On the number of multiplications necessary to compute a length-<!--Math is not currently allowed within BibTeXML.--> DFT</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>91-95</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid29">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Hegland, Markus</bib:author>
+        <bib:title>A self-sorting in-place fast Fourier transform algorithm suitable for vector and parallel processing</bib:title>
+        <bib:journal>Numerische Mathematik</bib:journal>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:volume>68</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>507–547</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, D. H. and Burrus, C. S.</bib:author>
+        <bib:title>Gauss and the history of the fast Fourier transform</bib:title>
+        <bib:journal>IEEE ASSP Magazine</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>1</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>14-21</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid36">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Hong, Jia-Wei and Kung, H. T.</bib:author>
+        <bib:title>I/O complexity: the red-blue pebbling game</bib:title>
+        <bib:booktitle>Proc. Thirteenth Ann. ACM Symp. Theory of Computing</bib:booktitle>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>326–333</bib:pages>
+        <bib:address>Milwaukee</bib:address>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid26">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>An in-place in-order radix-2 FFT</bib:title>
+        <bib:booktitle>Proc. IEEE Int'l Conf. Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.2.1–4</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Steven G. and Frigo, Matteo</bib:author>
+        <bib:title>A modified split-radix FFT with fewer arithmetic operations</bib:title>
+        <bib:journal>IEEE Trans. Signal Processing</bib:journal>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume>55</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>111–119</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid54">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Steven G. and Joannopoulos, J. D.</bib:author>
+        <bib:title>Block-iterative frequency-domain methods for Maxwell's equations in a planewave basis</bib:title>
+        <bib:journal>Optics Express</bib:journal>
+        <bib:year>2001</bib:year>
+<!--optional fields-->
+        <bib:volume>8</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>173–190</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid23">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Karp, Alan H.</bib:author>
+        <bib:title>Bit reversal on uniprocessors</bib:title>
+        <bib:journal>SIAM Rev.</bib:journal>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:volume>38</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>1–26</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Knuth, Donald E.</bib:author>
+        <bib:title>Fundamental Algorithms</bib:title>
+        <bib:publisher>Addison-Wesley</bib:publisher>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume>1</bib:volume>
+        <bib:series>The Art of Computer Programming</bib:series>
+        <bib:address/>
+        <bib:edition>3nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Lundy, T. and Van Buskirk, J.</bib:author>
+        <bib:title>A new matrix approach to real FFTs and convolutions of length <!--Math is not currently allowed within BibTeXML.--></bib:title>
+        <bib:journal>Computing</bib:journal>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume>80</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>23–45</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Martens, J. B.</bib:author>
+        <bib:title>Recursive cyclotomic factorization—A new algorithm for calculating the discrete Fourier transform</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>750-761</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Morgenstern, Jacques</bib:author>
+        <bib:title>Note on a lower bound of the linear complexity of the fast Fourier transform</bib:title>
+        <bib:journal/>
+        <bib:year>1973</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>305-306</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid42">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Nakayama, Kenji</bib:author>
+        <bib:title>An improved fast Fourier transform algorithm using mixed frequency and time decimations</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume>36</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>290–292</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid30">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W. and Buck, J. R.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Upper Saddle River, NJ</bib:address>
+        <bib:edition>2nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Pan, Victor Ya.</bib:author>
+        <bib:title>The trade-off between the additive complexity and the asyncronicity of linear and bilinear algorithms</bib:title>
+        <bib:journal>Information Proc. Lett.</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>22</bib:volume>
+        <bib:number/>
+        <bib:pages>11–14</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Papadimitriou, Christos H.</bib:author>
+        <bib:title>Optimality of the fast Fourier transform</bib:title>
+        <bib:journal/>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume>26</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>95-102</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Press, W. H. and Flannery, B. P. and Teukolsky, S. A. and Vetterling, W. T.</bib:author>
+        <bib:title>Numerical Recipes in C: The Art of Scientific Computing</bib:title>
+        <bib:publisher>Cambridge Univ. Press</bib:publisher>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York, NY</bib:address>
+        <bib:edition>2nd</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid40">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Püschel, Markus and Moura, José M. F. and Johnson, Jeremy R. and Padua, David and Veloso, Manuela M. and Singer, Bryan W. and Xiong, Jianxin and Franchetti, Franz and Gačić, Aca and Voronenko, Yevgen and Chen, Kang and Johnson, Robert W. and Rizzolo, Nicholas</bib:author>
+        <bib:title>SPIRAL: Code generation for DSP transforms</bib:title>
+        <bib:journal>Proc. IEEE</bib:journal>
+        <bib:year>2005</bib:year>
+<!--optional fields-->
+        <bib:volume>93</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>232-275</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid28">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Qian, Z. and Lu, C. and An, M. and Tolimieri, R.</bib:author>
+        <bib:title>Self-sorting in-place FFT algorithm with minimum working space</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:volume>42</bib:volume>
+        <bib:number>10</bib:number>
+        <bib:pages>2835–2836</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid31">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rader, C. M.</bib:author>
+        <bib:title>Discrete Fourier transforms when the number of data samples is prime</bib:title>
+        <bib:journal>Proc. IEEE</bib:journal>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:volume>56</bib:volume>
+        <bib:number/>
+        <bib:pages>1107–1108</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid51">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rader, Charles M. and Brenner, N. M.</bib:author>
+        <bib:title>A new principle for fast Fourier transformation</bib:title>
+        <bib:journal>IEEE Trans. Acoust., Speech, Signal Processing</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>24</bib:volume>
+        <bib:number/>
+        <bib:pages>264-265</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid33">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rabiner, Lawrence R. and Schafer, Ronald W. and Rader, Charles M.</bib:author>
+        <bib:title>The chirp <!--Math is not currently allowed within BibTeXML.-->-transform algorithm</bib:title>
+        <bib:journal>IEEE Trans. Audio Electroacoustics</bib:journal>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume>17</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>86–92</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid43">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Saidi, Ali</bib:author>
+        <bib:title>Decimation-in-time-frequency FFT algorithm</bib:title>
+        <bib:booktitle>Proc. IEEE Int'l Conf. Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>453–456</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid48">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Schatzman, James C.</bib:author>
+        <bib:title>Accuracy of the discrete Fourier transform and the fast Fourier transform</bib:title>
+        <bib:journal>SIAM J. Scientific Computing</bib:journal>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:volume>17</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1150–1166</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid22">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Singleton, Richard C.</bib:author>
+        <bib:title>On computing the fast Fourier transform</bib:title>
+        <bib:journal>Comm. ACM</bib:journal>
+        <bib:year>1967</bib:year>
+<!--optional fields-->
+        <bib:volume>10</bib:volume>
+        <bib:number/>
+        <bib:pages>647–654</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid24">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Stockham, T. G.</bib:author>
+        <bib:title>High speed convolution and correlation</bib:title>
+        <bib:journal>Proc. AFIPS Spring Joint Computer Conference</bib:journal>
+        <bib:year>1966</bib:year>
+<!--optional fields-->
+        <bib:volume>28</bib:volume>
+        <bib:number/>
+        <bib:pages>229–233</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid25">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Swarztrauber, P. N.</bib:author>
+        <bib:title>Vectorizing the FFTs</bib:title>
+        <bib:journal>Parallel Computations</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:number/>
+        <bib:pages>51–83</bib:pages>
+        <bib:month/>
+        <bib:note>G. Rodrigue ed.</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid27">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, C.</bib:author>
+        <bib:title>Self-sorting in-place fast Fourier transforms</bib:title>
+        <bib:journal>SIAM J. Scientific and Statistical Computing</bib:journal>
+        <bib:year>1991</bib:year>
+<!--optional fields-->
+        <bib:volume>12</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>808–823</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid47">
+      <bib:inbook>
+<!--required fields-->
+        <bib:author>Tasche, Manfred and Zeuner, Hansmartin</bib:author>
+        <bib:title>Handbook of Analytic-Computational Methods in Applied Mathematics</bib:title>
+        <bib:chapter>8</bib:chapter>
+        <bib:pages>357–406</bib:pages>
+        <bib:publisher>CRC Press</bib:publisher>
+        <bib:year>2000</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Boca Raton, FL</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:inbook>
+    </bib:entry>
+    <bib:entry id="bid49">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Tasche, Manfred and Zeuner, Hansmartin</bib:author>
+        <bib:title>Improved roundoff error analysis for precomputed twiddle factors</bib:title>
+        <bib:journal>J. Comput. Anal. Appl.</bib:journal>
+        <bib:year>2002</bib:year>
+<!--optional fields-->
+        <bib:volume>4</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>1–18</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:book>
+<!--required fields-->
+        <bib:author>van Loan, Charles</bib:author>
+        <bib:title>Computational Frameworks for the Fast Fourier Transform</bib:title>
+        <bib:publisher>SIAM</bib:publisher>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Philadelphia</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Vetterli, M. and Nussbaumer, H. J.</bib:author>
+        <bib:title>Simple FFT and DCT algorithms with reduced number of operations</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>6</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>267-278</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On computing the discrete Fourier transform</bib:title>
+        <bib:journal>Math. Computation</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>175–199</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid38">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Xiong, Jianxin and Padua, David and Johnson, Jeremy</bib:author>
+        <bib:title>SPL: A Language and Compiler for DSP Algorithms</bib:title>
+        <bib:booktitle>Proc. ACM SIGPLAN'01 Conf. Programming Language Design and Implementation (PLDI)</bib:booktitle>
+        <bib:year>2001</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>298-308</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Yavne, R.</bib:author>
+        <bib:title>An economical method for calculating the discrete Fourier transform</bib:title>
+        <bib:booktitle>Proc. AFIPS Fall Joint Computer Conf.</bib:booktitle>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>33</bib:volume>
+        <bib:series/>
+        <bib:pages>115-125</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid56">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Higham, N. J.</bib:author>
+        <bib:title>The accuracy of floating-point summation</bib:title>
+        <bib:journal>SIAM J. Sci. Comput.</bib:journal>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:volume>14</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>783–799</bib:pages>
+        <bib:month>July</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

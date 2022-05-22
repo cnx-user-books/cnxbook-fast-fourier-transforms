@@ -1,0 +1,2986 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>The Cooley-Tukey Fast Fourier Transform Algorithm</title>
+  <metadata>
+  <md:content-id>m16334</md:content-id><md:title>The Cooley-Tukey Fast Fourier Transform Algorithm</md:title>
+  <md:abstract/>
+  <md:uuid>83c87ca8-6d8b-4859-9fb5-3aeb5f7b6fd5</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">The publication by Cooley and Tukey <link target-id="bid0"/> in 1965 of an
+efficient algorithm for the calculation of the DFT was a major
+turning point in the development of digital signal processing.
+During the five or so years that followed, various extensions and
+modifications were made to the original algorithm <link target-id="bid1"/>. By the early
+1970's the practical programs were basically in the form used today.
+The standard development presented in <link target-id="bid2"/>, <link target-id="bid3"/>, <link target-id="bid4"/> shows
+how the DFT of a length-N sequence can be simply calculated from the
+two length-N/2 DFT's of the even index terms and the odd index
+terms. This is then applied to the two half-length DFT's to give
+four quarter-length DFT's, and repeated until N scalars are left
+which are the DFT values. Because of alternately taking the even and
+odd index terms, two forms of the resulting programs are called
+decimation-in-time and decimation-in-frequency. For a length of
+<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math>, the dividing process is repeated <m:math><m:mrow><m:mi>M</m:mi><m:mo>=</m:mo><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>N</m:mi></m:mrow></m:math> times and
+requires <m:math><m:mi>N</m:mi></m:math> multiplications each time. This gives the famous
+formula for the computational complexity of the FFT of <m:math><m:mrow><m:mi>N</m:mi><m:msub><m:mo form="prefix">log</m:mo><m:mn>2</m:mn></m:msub><m:mi>N</m:mi></m:mrow></m:math>
+which was derived in <link document="m16326" target-id="uid43">Multidimensional Index Mapping: Equation 34</link>.</para>
+    <para id="id2255664">Although the decimation methods are straightforward and easy
+to understand, they do not generalize well. For that reason it will
+be assumed that the reader is familiar with that description and
+this chapter will develop the FFT using the index map from <link document="m16326">Multidimensional Index Mapping</link>.</para>
+    <para id="id2255674">The Cooley-Tukey FFT always uses the Type 2 index map from
+<link document="m16326" target-id="uid16">Multidimensional Index Mapping: Equation 11</link>. This is necessary for the most popular forms that
+have <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mi>R</m:mi><m:mi>M</m:mi></m:msup></m:mrow></m:math>, but is also used even when the factors are
+relatively prime and a Type 1 map could be used. The time and
+frequency maps from <link document="m16326" target-id="uid7">Multidimensional Index Mapping: Equation 6</link> and <link document="m16326" target-id="uid17">Multidimensional Index Mapping: Equation 12</link> are</para>
+    <equation id="uid1">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>n</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>n</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <equation id="uid2">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>k</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2255838">Type-2 conditions <link document="m16326" target-id="uid11">Multidimensional Index Mapping: Equation 8</link> and <link document="m16326" target-id="uid16">Multidimensional Index Mapping: Equation 11</link> become</para>
+    <equation id="uid3">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>a</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>or</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>b</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>but</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>not</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>both</m:mtext>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2254917">and</para>
+    <equation id="uid4">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>3</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>c</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>or</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>4</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mi>d</m:mi>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>but</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>not</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>both</m:mtext>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256258">The row and column calculations in <link document="m16326" target-id="uid20">Multidimensional Index Mapping: Equation 15</link> are uncoupled by
+<link document="m16326" target-id="uid21">Multidimensional Index Mapping: Equation 16</link> which for this case are</para>
+    <equation id="uid5">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mn>0</m:mn>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>or</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mn>0</m:mn>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>but</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>not</m:mtext>
+          <m:mspace width="4.pt"/>
+          <m:mtext>both</m:mtext>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256382">To make each short sum a DFT, the <m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> must satisfy</para>
+    <equation id="uid6">
+      <m:math mode="display">
+        <m:mrow>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>1</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>3</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mtext>and</m:mtext>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msub>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msub>
+                <m:msub>
+                  <m:mi>K</m:mi>
+                  <m:mn>4</m:mn>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mi>N</m:mi>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256510">In order to have the smallest values for
+<m:math><m:msub><m:mi>K</m:mi><m:mi>i</m:mi></m:msub></m:math> the constants in <link target-id="uid3"/> are chosen to be</para>
+    <equation id="uid7">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>a</m:mi>
+          <m:mo>=</m:mo>
+          <m:mi>d</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>K</m:mi>
+            <m:mn>3</m:mn>
+          </m:msub>
+          <m:mo>=</m:mo>
+          <m:mn>1</m:mn>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256575">which makes the index maps of <link target-id="uid1"/> become</para>
+    <equation id="uid8">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>n</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+          <m:msub>
+            <m:mi>n</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mo>+</m:mo>
+          <m:msub>
+            <m:mi>n</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <equation id="uid9">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>k</m:mi>
+          <m:mo>=</m:mo>
+          <m:msub>
+            <m:mi>k</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:mo>+</m:mo>
+          <m:msub>
+            <m:mi>N</m:mi>
+            <m:mn>1</m:mn>
+          </m:msub>
+          <m:msub>
+            <m:mi>k</m:mi>
+            <m:mn>2</m:mn>
+          </m:msub>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256664">These index maps are all evaluated modulo <m:math><m:mi>N</m:mi></m:math>, but in <link target-id="uid8"/>, explicit reduction is not necessary since 
+<m:math><m:mi>n</m:mi></m:math> never exceeds <m:math><m:mi>N</m:mi></m:math>. The reduction notation will be omitted for
+clarity. From <link document="m16326" target-id="uid20">Multidimensional Index Mapping: Equation 15</link> and example <link document="m16326" target-id="uid24">Multidimensional Index Mapping: Equation 19</link>, the DFT is</para>
+    <equation id="uid10"><m:math mode="display">
+        <m:mrow>
+          <m:mi>X</m:mi>
+          <m:mo>=</m:mo>
+          <m:munderover>
+<m:mrow>
+            <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:munderover>
+<m:mrow>         
+   <m:mo>∑</m:mo>
+</m:mrow>        
+    <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mn>0</m:mn>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+            </m:mrow>
+          </m:munderover>
+          <m:mi>x</m:mi>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mi>N</m:mi>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mrow>
+              <m:msub>
+                <m:mi>N</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2256874">This map of <link target-id="uid8"/> and the form of the DFT in <link target-id="uid10"/> are
+the fundamentals of the Cooley-Tukey FFT.</para>
+    <para id="id2256887">The order of the summations using the Type 2 map in <link target-id="uid10"/>
+cannot be reversed as it can with the Type-1 map. This is because
+of the <m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math> terms, the twiddle factors.</para>
+    <para id="id2256911">Turning <link target-id="uid10"/> into an efficient program requires some care.
+From <link document="m16326" target-id="uid37">Multidimensional Index Mapping: Efficiencies Resulting from Index Mapping with the DFT</link> we know that all the factors should be
+equal. If 
+
+<m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:msup><m:mi>R</m:mi><m:mi>M</m:mi></m:msup></m:mrow></m:math> , 
+
+with R called the radix, 
+<m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> 
+
+is first set
+equal to 
+
+<m:math><m:mi>R</m:mi></m:math> 
+
+and 
+
+<m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> 
+
+is then necessarily <m:math><m:msup><m:mi>R</m:mi><m:mrow><m:mi>M</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup>
+</m:math>. 
+
+Consider 
+
+<m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math>
+to be the index along the rows and <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math> along the columns. The inner
+sum of <link target-id="uid10"/> over <m:math><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub></m:math> represents a length-<m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> DFT for each value
+of <m:math><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub></m:math>. These <m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> length-<m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> DFT's are the DFT's of the rows
+of the <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:msub><m:mi>n</m:mi><m:mn>1</m:mn></m:msub><m:mo>,</m:mo><m:msub><m:mi>n</m:mi><m:mn>2</m:mn></m:msub><m:mrow><m:mo>)</m:mo></m:mrow></m:mrow></m:math> array. The resulting array of row DFT's is
+multiplied by an array of twiddle factors which are the <m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math> terms
+in <link target-id="uid10"/>. The twiddle-factor array for a length-8 radix-2 FFT
+is</para>
+    <equation id="uid11">
+      <m:math mode="display">
+        <m:mrow>
+          <m:mi>T</m:mi>
+          <m:mi>F</m:mi>
+          <m:mo>:</m:mo>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:mspace width="4pt"/>
+          <m:msubsup>
+            <m:mi>W</m:mi>
+            <m:mn>8</m:mn>
+            <m:mrow>
+              <m:msub>
+                <m:mi>n</m:mi>
+                <m:mn>2</m:mn>
+              </m:msub>
+              <m:msub>
+                <m:mi>k</m:mi>
+                <m:mn>1</m:mn>
+              </m:msub>
+            </m:mrow>
+          </m:msubsup>
+          <m:mo>=</m:mo>
+          <m:mfenced separators="" open="[" close="]">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>0</m:mn>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>0</m:mn>
+                  </m:msup>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>0</m:mn>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>1</m:mn>
+                  </m:msup>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>0</m:mn>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>2</m:mn>
+                  </m:msup>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>0</m:mn>
+                  </m:msup>
+                </m:mtd>
+                <m:mtd>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mn>3</m:mn>
+                  </m:msup>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:mfenced>
+          <m:mo>=</m:mo>
+          <m:mfenced separators="" open="[" close="]">
+            <m:mtable>
+              <m:mtr>
+                <m:mtd>
+                  <m:mn>1</m:mn>
+                </m:mtd>
+                <m:mtd>
+                  <m:mn>1</m:mn>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:mn>1</m:mn>
+                </m:mtd>
+                <m:mtd>
+                  <m:mi>W</m:mi>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:mn>1</m:mn>
+                </m:mtd>
+                <m:mtd>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mi>j</m:mi>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+              <m:mtr>
+                <m:mtd>
+                  <m:mn>1</m:mn>
+                </m:mtd>
+                <m:mtd>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mi>j</m:mi>
+                    <m:mi>W</m:mi>
+                  </m:mrow>
+                </m:mtd>
+              </m:mtr>
+            </m:mtable>
+          </m:mfenced>
+        </m:mrow>
+      </m:math>
+    </equation>
+    <para id="id2257353">The twiddle factor array will always have unity in the first row and
+first column.</para>
+    <para id="id2257358">To complete <link target-id="uid10"/> at this point, after the row DFT's are
+multiplied by the TF array, the <m:math><m:msub><m:mi>N</m:mi><m:mn>1</m:mn></m:msub></m:math> length-<m:math><m:msub><m:mi>N</m:mi><m:mn>2</m:mn></m:msub></m:math> DFT's of the
+columns are calculated. However, since the columns DFT's are of
+length 
+
+<m:math><m:msup><m:mrow><m:mi>R</m:mi></m:mrow>
+<m:mrow><m:mi>M</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:math>, 
+
+they can be posed as a 
+<m:math><m:msup><m:mrow><m:mi>R</m:mi></m:mrow>
+<m:mrow><m:mi>M</m:mi><m:mo>-</m:mo><m:mn>2</m:mn></m:mrow></m:msup></m:math> by <m:math><m:mi>R</m:mi></m:math> array and the
+process repeated, again using length-<m:math><m:mi>R</m:mi></m:math> DFT's. After <m:math><m:mi>M</m:mi></m:math> stages of
+length-<m:math><m:mi>R</m:mi></m:math> DFT's with TF multiplications interleaved, the DFT is
+complete. The flow graph of a length-2 DFT is given in <link document="m16333" target-id="uid12">Figure 1</link>		 and
+is called a butterfly because of its shape. The flow graph of the
+complete length-8 radix-2 FFT is shown in <link document="m16333" target-id="uid13"> Figure 2</link>		.</para>
+    <figure id="uid12" orient="horizontal"><media id="id1171274253396" alt="This figure contains four items with arrows arranged evenly and rectangularly, and arrows pointing from the leftmost items to the rightmost items. The first two items on the left read x(0) on the top and x(1) on the bottom, and are accompanied by large dots next to them, indicating a starting point for four arrows. From each dot are two arrows, one pointing directly across to the right at an item, and one pointing diagonally to the right at the other rightmost item. The top-right item that is pointed to by two arrows reads X(0)  = x(0) + x(1), and the bottom-right item that is pointed to by two arrows reads X(0)  = x(0) - x(1). The horizontal line pointing from the bototm-left item to the bottom-right item is labeled with a dash. The entire figure is labeled, Radix-2 butterfly."><image src="../../media/R2BF.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/R2BF.eps" mime-type="application/postscript" print-width="3in"/></media><caption>A Radix-2 Butterfly</caption></figure>
+    <figure id="uid13" orient="horizontal"><media id="id1171265374216" alt="This figure is a flow graph with eight lines crossing in different directions at three points along the graph from left to right, with each beginning and end point marked with a black dot. The eight horizontal lines that flow consistently across the graph are labeled on the left in order as x_0 to x_7. At its initial point, x_0 through x_3 connect diagonally downward four rows, so that they meet x_4 through x_7 at the same horizontal level. Conversely, x_4 through x_7 connect diagonally upward to the original locations of x_0 to x_3, respectively. Directly before the first four lines connect to the last four lines, on the fifth through eighth horizontal parallels where they will connect, are small arrows indicating movement to the right, and these arrows are labeled with a dash. Directly after these lines connect on the fifth through eighth parallels are small arrows pointing to the right again, this time labeled with w^0, w^1, w^2, w^3 respectively. At this point, the figure is described about halfway across the page from left to right. The next section of crossed lines is exactly the same for the top four parallels and the bottom four parallels. The top two lines in each section connect diagonally downward two spaces, and conversely the bottom two lines connect diagonally upward the same amount. The second half of each section (the third, fourth, seventh and eight) again have arrows labeled with a dash pointing to the right, before the connected segments, and arrows pointing to the right labeled w^0 and w^2 respectively after the connections. Finally, one more set of crossed connected lines occurs, this time in an identical pattern for four groups of two lines. The lines cross this other and connect to the adjacent parallel, with odd-numbered parallels connecting downward and their even-numbered partners connecting upward. Before the connection point are again arrows pointing to the right, labeled with a dash, that occur in the second, fourth, sixth, and eighth parallels. This concludes the lines, and the labels to these lines on the right side of the figure read x_0, x_4, x_2, x_6, x_1, x_5, x_3, x_7 down the page."><image src="../../media/File0026.png" mime-type="image/png" width="500"/><image for="pdf" src="../../media/File0026.eps" mime-type="application/postscript" print-width="3in"/></media><caption>Length-8 Radix-2 FFT Flow Graph</caption></figure>
+    <para id="id2257497">This flow-graph, the twiddle factor map of <link target-id="uid11"/>, and the
+basic equation <link target-id="uid10"/> should be completely understood before
+going further.</para>
+    <para id="id2257511">A very efficient indexing scheme has evolved over the years
+that results in a compact and efficient computer program. A FORTRAN
+program is given below that implements the radix-2 FFT. It should be
+studied <link target-id="bid5"/> to see how it implements <link target-id="uid10"/> and the
+flow-graph representation.</para>
+    <code id="uid14" display="block" class="listing">N2 = N
+        DO 10 K = 1, M
+            N1 = N2
+            N2 = N2/2
+            E  = 6.28318/N1
+            A  = 0
+            DO 20 J = 1, N2
+                C = COS (A)
+                S =-SIN (A)
+                A = J*E
+                DO 30 I = J, N, N1
+                    L = I + N2
+                    XT   = X(I) - X(L)
+                    X(I) = X(I) + X(L)
+                    YT   = Y(I) - Y(L)
+                    Y(I) = Y(I) + Y(L)
+                    X(L) = XT*C - YT*S
+                    Y(L) = XT*S + YT*C
+   30           CONTINUE
+   20       CONTINUE
+   10   CONTINUE
+ 
+ 
+<caption>A Radix-2 Cooley-Tukey FFT Program</caption></code>
+    <para id="id2257737">This discussion, the flow graph of <link document="m16333" target-id="uid24">Winograd’s Short DFT Algorithms: Figure 2</link> and the program
+of <link target-id="uid14"/> are all based on the input index map of
+<link document="m16326" target-id="uid7">Multidimensional Index Mapping: Equation 6</link> and <link target-id="uid1"/> and the calculations are performed
+in-place. According to <link document="m16326" target-id="uid34">Multidimensional Index Mapping: In-Place Calculation of the DFT and Scrambling</link>, this means the output is
+scrambled in bit-reversed order and should be followed by an
+unscrambler to give the DFT in proper order. This formulation is
+called a decimation-in-frequency FFT <link target-id="bid2"/>, <link target-id="bid3"/>, <link target-id="bid4"/>. A very
+similar algorithm based on the output index map can be derived which
+is called a decimation-in-time FFT. Examples of FFT programs are
+found in <link target-id="bid5"/> and in the Appendix of this book.</para>
+    <section id="uid15">
+      <title>Modifications to the Basic Cooley-Tukey FFT</title>
+      <para id="id2257793">Soon after the paper by Cooley and Tukey, there were
+improvements and extensions made. One very important discovery was
+the improvement in efficiency by using a larger radix of 4, 8 or
+even 16. For example, just as for the radix-2 butterfly, there are
+no multiplications required for a length-4 DFT, and therefore, a
+radix-4 FFT would have only twiddle factor multiplications. Because
+there are half as many stages in a radix-4 FFT, there would be half
+as many multiplications as in a radix-2 FFT. In practice, because
+some of the multiplications are by unity, the improvement is not by
+a factor of two, but it is significant. A radix-4 FFT is easily
+developed from the basic radix-2 structure by replacing the length-2
+butterfly by a length-4 butterfly and making a few other
+modifications. Programs can be found in <link target-id="bid5"/> and operation
+counts will be given in <link target-id="uid24">"Evaluation of the Cooley-Tukey FFT Algorithms"</link>.</para>
+      <para id="id2257820">Increasing the radix to 8 gives some improvement but not as
+much as from 2 to 4. Increasing it to 16 is theoretically promising
+but the small decrease in multiplications is somewhat offset by an
+increase in additions and the program becomes rather long. Other
+radices are not attractive because they generally require a
+substantial number of multiplications and additions in the
+butterflies.</para>
+      <para id="id2257830">The second method of reducing arithmetic is to remove the
+unnecessary TF multiplications by plus or minus unity or by plus or
+minus the square root of minus one. This occurs when the exponent of
+<m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math> is zero or a multiple of <m:math><m:mrow><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>4</m:mn></m:mrow></m:math>. A reduction of additions as
+well as multiplications is achieved by removing these extraneous
+complex multiplications since a complex multiplication requires at
+least two real additions. In a program, this reduction is usually
+achieved by having special butterflies for the cases where the TF is
+one or <m:math><m:mi>j</m:mi></m:math>. As many as four special butterflies may be necessary to
+remove all unnecessary arithmetic, but in many cases there will be
+no practical improvement above two or three.</para>
+      <para id="id2257883">In addition to removing multiplications by one or <m:math><m:mi>j</m:mi></m:math>, there
+can be a reduction in multiplications by using a special butterfly
+for TFs with <m:math><m:msub><m:mi>W</m:mi><m:mrow><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>8</m:mn></m:mrow></m:msub></m:math>, which have equal real and imaginary parts.
+Also, for computers or hardware with multiplication considerably
+slower than addition, it is desirable to use an algorithm for
+complex multiplication that requires three multiplications and three
+additions rather than the conventional four multiplications and two
+additions. Note that this gives no reduction in the total number of
+arithmetic operations, but does give a trade of multiplications for
+additions. This is one reason not to use complex data types in
+programs but to explicitly program complex arithmetic.</para>
+      <para id="id2257925">A time-consuming and unnecessary part of the execution of a
+FFT program is the calculation of the sine and cosine terms which
+are the real and imaginary parts of the TFs. There are basically
+three approaches to obtaining the sine and cosine values. They can
+be calculated as needed which is what is done in the sample program
+above. One value per stage can be calculated and the others
+recursively calculated from those. That method is fast but suffers
+from accumulated round-off errors. The fastest method is to fetch
+precalculated values from a stored table. This has the disadvantage
+of requiring considerable memory space.</para>
+      <para id="id2257939">If all the N DFT values are not needed, special forms of the
+FFT can be developed using a process called pruning <link target-id="bid6"/>
+which removes the operations concerned with the unneeded outputs.</para>
+      <para id="id2257950">Special algorithms are possible for cases with real data or
+with symmetric data <link target-id="bid7"/>. The decimation-in-time algorithm
+can be easily modified to transform real data and save half the
+arithmetic required for complex data <link target-id="bid8"/>. There are
+numerous other modifications to deal with special hardware
+considerations such as an array processor or a special
+microprocessor such as the Texas Instruments TMS320. Examples of
+programs that deal with some of these items can be found in
+<link target-id="bid3"/>, <link target-id="bid5"/>, <link target-id="bid7"/>.</para>
+    </section>
+    <section id="uid16">
+      <title>The Split-Radix FFT Algorithm</title>
+      <para id="id2257996">Recently several papers <link target-id="bid9"/>, <link target-id="bid10"/>, <link target-id="bid11"/>, <link target-id="bid12"/>, <link target-id="bid13"/>
+have been published on algorithms to calculate a length-<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math> DFT
+more efficiently than a Cooley-Tukey FFT of any radix. They all have
+the same computational complexity and are optimal for lengths up
+through 16 and until recently was thought to give the best total add-multiply count
+possible for any power-of-two length. Yavne published an algorithm
+with the same computational complexity in 1968 <link target-id="bid14"/>, but it
+went largely unnoticed. Johnson and Frigo have recently reported the first
+improvement in almost 40 years <link target-id="bid15"/>. The reduction
+in total operations is only a few percent, but it is a reduction.</para>
+      <para id="id2258067">The basic idea behind the split-radix FFT (SRFFT) as derived
+by Duhamel and Hollmann <link target-id="bid10"/>, <link target-id="bid13"/> is the application of a
+radix-2 index map to the even-indexed terms and a radix-4 map to the
+odd- indexed terms. The basic definition of the DFT</para>
+      <equation id="uid17"><m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>C</m:mi>
+              <m:mi>k</m:mi>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:msub>
+              <m:mi>x</m:mi>
+              <m:mi>n</m:mi>
+            </m:msub>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258150">with <m:math><m:mrow><m:mi>W</m:mi><m:mo>=</m:mo><m:msup><m:mi>e</m:mi><m:mrow><m:mo>-</m:mo><m:mi>j</m:mi><m:mn>2</m:mn><m:mi>π</m:mi><m:mo>/</m:mo><m:mi>N</m:mi></m:mrow></m:msup></m:mrow></m:math> gives</para>
+      <equation id="uid18"><m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mn>2</m:mn>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mspace width="4pt"/>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:msub>
+                <m:mi>x</m:mi>
+                <m:mi>n</m:mi>
+              </m:msub>
+              <m:mo>+</m:mo>
+              <m:msub>
+                <m:mi>x</m:mi>
+                <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>+</m:mo>
+                  <m:mi>N</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                </m:mrow>
+              </m:msub>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mn>2</m:mn>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258287">for the even index terms, and</para>
+      <equation id="uid19"><m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mn>4</m:mn>
+                <m:mi>k</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>4</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mspace width="4pt"/>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mi>n</m:mi>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>2</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>j</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>4</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mn>3</m:mn>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>4</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mi>n</m:mi>
+            </m:msup>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mn>4</m:mn>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258463">and</para>
+      <equation id="uid20"><m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mn>4</m:mn>
+                <m:mi>k</m:mi>
+                <m:mo>+</m:mo>
+                <m:mn>3</m:mn>
+              </m:mrow>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>/</m:mo>
+                <m:mn>4</m:mn>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mspace width="4pt"/>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mi>n</m:mi>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>2</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>4</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>x</m:mi>
+                  <m:mrow>
+                    <m:mi>n</m:mi>
+                    <m:mo>+</m:mo>
+                    <m:mn>3</m:mn>
+                    <m:mi>N</m:mi>
+                    <m:mo>/</m:mo>
+                    <m:mn>4</m:mn>
+                  </m:mrow>
+                </m:msub>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mn>3</m:mn>
+                <m:mi>n</m:mi>
+              </m:mrow>
+            </m:msup>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mn>4</m:mn>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258642">for the odd index terms. This results in
+an L-shaped “butterfly" shown in <link target-id="uid21"/> which relates a length-N
+DFT to one length-N/2 DFT and two length-N/4 DFT's with twiddle
+factors. Repeating this process for the half and quarter length
+DFT's until scalars result gives the SRFFT algorithm in much the
+same way the decimation-in-frequency radix-2 Cooley-Tukey FFT is
+derived <link target-id="bid2"/>, <link target-id="bid3"/>, <link target-id="bid4"/>. The resulting flow graph for the
+algorithm calculated in place looks like a radix-2 FFT except for
+the location of the twiddle factors. Indeed, it is the location of
+the twiddle factors that makes this algorithm use less arithmetic.
+The L- shaped SRFFT butterfly <link target-id="uid21"/> advances the calculation of the top
+half by one of the <m:math><m:mi>M</m:mi></m:math> stages while the lower half, like a radix-4
+butterfly, calculates two stages at once. This is illustrated for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mn>8</m:mn></m:mrow></m:math> in <link target-id="uid22"/>.</para>
+      <figure id="uid21" orient="horizontal"><media id="id1171268829911" alt="This figure is an array of dots connected with diagonal and horizontal lines. There are two vertical columns of four dots followed by a third column with two dots. The first column of dots each has one horizontal line pointing across, and one diagonal line pointing downward for the first two rows and upward for the second two rows. The diagonal lines connect to dots on the second column either two rows above or two rows below their original position. To the left of the third and fourth dots on the second column, next to the horizontal lines that connect to them, are two dashes. In between the third and fourth dots of the second column is a large label, j. Further to the right, the third and fourth dots of the second column connect to the two dots in the third column. The third dot in the second column connects to the second dot in the third column, which is horizontally level with the fourth dot in the second column. The fourth dot in the second column connects to the first dot in the third column, which is horizontally level with the third dot in the second column. Along this line segment is a dash near the first dot of the third column. There are also two horizontal lines connecting the third dot in the second column with the first dot in the third column, and the fourth dot in the second column with the second dot in the third column."><image src="../../media/File0029.png" mime-type="image/png" width="200"/><image for="pdf" src="../../media/File0029.eps" mime-type="application/postscript" print-width="3in"/></media><caption>SRFFT Butterfly</caption></figure>
+      <figure id="uid22" orient="horizontal"><media id="id1171269647303" alt="This figure is a flow graph with eight lines crossing in different directions at three points along the graph from left to right. The eight horizontal lines that flow consistently across the graph begin with black dots. At these initial points, the first four connect diagonally downward four rows, and the last four connect diagonally upward to the first four rows. For each of the eight initial dots, there is also a horizontal line connecting these initial dots to eight vertical dots at the same point that the aforementioned diagonal lines terminate. At this point in the figure, the graph separates between a lower half and upper half. At this point in the lower half in between the dots are a label, j. The lower half continues directly from the lower four dots that were connected in the large first section, and to the right they behave in a similar fashion, with the upper two moving two spaces down diagonally, and the lower two moving two spaces up, accompanied by horizontal lines connecting the dots directly across. There is a break in horizontal movement for the lower half of the figure at this point, where the four dots are disconnected and followed by a new set of four adjacent dots. These dots are visually grouped in two sections, with more diagonal lines simply connecting each dot to one adjacent dot diagonally to the right, up or down, and two horizontal lines connecting the dots directly across. In between these two sections and the larger section to the left are two labels, one above labeled w, and the lower labeled w^3. The upper portion of the right half of the figure is not continued or connected to the large initial section. Its first portion mimics the shape of its lower neighbor, with four rows of dots, four horizontal lines to four adjacent dots, and diagonal lines moving upward and downward two spaces up or down. Connected to the lower portion of this upper section is another set of two dots, both vertically and diagonally connected to the larger section to its left. In the middle of the leftmost dots of this section is a label, j. Above and in the upper-right corner of the figure is a final disconnected set of four dots, diagonally and horizontally connected. For the entire figure, there is a dash labeling each dot that to its left is connected by a down-sloping diagonal line."><image src="../../media/File0030.png" mime-type="image/png" width="300"/><image for="pdf" src="../../media/File0030.eps" mime-type="application/postscript" print-width="3in"/></media><caption>Length-8 SRFFT</caption></figure>
+      <para id="id2258740">Unlike the fixed radix, mixed radix or variable radix
+Cooley-Tukey FFT or even the prime factor algorithm or Winograd
+Fourier transform algorithm , the Split-Radix FFT does not progress
+completely stage by stage, or, in terms of indices, does not
+complete each nested sum in order. This is perhaps better seen from
+the polynomial formulation of Martens <link target-id="bid9"/>. Because of
+this, the indexing is somewhat more complicated than the
+conventional Cooley-Tukey program.</para>
+      <para id="id2258757">A FORTRAN program is given below which implements the basic
+decimation-in-frequency split-radix FFT algorithm. The indexing
+scheme <link target-id="bid12"/> of this program gives a structure very similar
+to the Cooley-Tukey programs in <link target-id="bid5"/> and allows the same
+modifications and improvements such as decimation-in-time, multiple
+butterflies, table look-up of sine and cosine values, three real per
+complex multiply methods, and real data versions
+<link target-id="bid13"/>, <link target-id="bid8"/>.</para>
+      <code id="uid23" display="block" class="listing">SUBROUTINE FFT(X,Y,N,M)
+        N2 = 2*N
+        DO  10 K = 1, M-1
+            N2 = N2/2
+            N4 = N2/4
+            E  = 6.283185307179586/N2
+            A = 0
+            DO  20 J = 1, N4
+                A3  = 3*A
+                CC1 = COS(A)
+                SS1 = SIN(A)
+                CC3 = COS(A3)
+                SS3 = SIN(A3)
+                A   = J*E
+                IS  = J
+                ID  = 2*N2
+ 40             DO 30 I0 = IS, N-1, ID
+                    I1 = I0 + N4
+                    I2 = I1 + N4
+                    I3 = I2 + N4
+                    R1    = X(I0) - X(I2)
+                    X(I0) = X(I0) + X(I2)
+                    R2    = X(I1) - X(I3)
+                    X(I1) = X(I1) + X(I3)
+                    S1    = Y(I0) - Y(I2)
+                    Y(I0) = Y(I0) + Y(I2)
+                    S2    = Y(I1) - Y(I3)
+                    Y(I1) = Y(I1) + Y(I3)
+                    S3    = R1 - S2
+                    R1    = R1 + S2
+                    S2    = R2 - S1
+                    R2    = R2 + S1
+                    X(I2) = R1*CC1 - S2*SS1
+                    Y(I2) =-S2*CC1 - R1*SS1
+                    X(I3) = S3*CC3 + R2*SS3
+                    Y(I3) = R2*CC3 - S3*SS3
+ 30             CONTINUE
+                IS = 2*ID - N2 + J
+                ID = 4*ID
+                IF (IS.LT.N) GOTO 40
+ 20         CONTINUE
+ 10     CONTINUE
+        IS = 1
+        ID = 4
+ 50     DO 60 I0 = IS, N, ID
+            I1    = I0 + 1
+            R1    = X(I0)
+            X(I0) = R1 + X(I1)
+            X(I1) = R1 - X(I1)
+            R1    = Y(I0)
+            Y(I0) = R1 + Y(I1)
+  60    Y(I1) = R1 - Y(I1)
+            IS = 2*ID - 1
+            ID = 4*ID
+        IF (IS.LT.N) GOTO 50
+ 
+ 
+<caption>Split-Radix FFT FORTRAN Subroutine</caption></code>
+      <para id="id2259324">As was done for the other decimation-in-frequency
+algorithms, the input index map is used and the calculations are
+done in place resulting in the output being in bit-reversed order.
+It is the three statements following label 30 that do the special
+indexing required by the SRFFT. The last stage is length- 2 and,
+therefore, inappropriate for the standard L-shaped butterfly, so it
+is calculated separately in the DO 60 loop. This program is
+considered a one-butterfly version. A second butterfly can be added
+just before statement 40 to remove the unnecessary multiplications
+by unity. A third butterfly can be added to reduce the number of
+real multiplications from four to two for the complex multiplication
+when W has equal real and imaginary parts. It is also possible to
+reduce the arithmetic for the two- butterfly case and to reduce the
+data transfers by directly programming a length-4 and length-8
+butterfly to replace the last three stages. This is called a
+two-butterfly-plus version. Operation counts for the one, two,
+two-plus and three butterfly SRFFT programs are given in the next
+section. Some details can be found in <link target-id="bid12"/>.</para>
+      <para id="id2259370">The special case of a SRFFT for real data and symmetric data
+is discussed in <link target-id="bid13"/>. An application of the
+decimation-in-time SRFFT to real data is given in <link target-id="bid8"/>.
+Application to convolution is made in <link target-id="bid16"/>, to the discrete
+Hartley transform in <link target-id="bid17"/>, <link target-id="bid16"/>, to calculating the discrete
+cosine transform in <link target-id="bid11"/>, and could be made to calculating
+number theoretic transforms.</para>
+      <para id="id2259412">An improvement in operation count has been reported by Johnson
+and Frigo <link target-id="bid15"/> which involves a scaling of multiplying
+factors. The improvement is small but until this result, it was
+generally thought the Split-Radix FFT was optimal for total floating
+point operation count.</para>
+    </section>
+    <section id="uid24">
+      <title>Evaluation of the Cooley-Tukey FFT Algorithms</title>
+      <para id="id2259434">The evaluation of any FFT algorithm starts with a count of
+the real (or floating point) arithmetic. <link target-id="uid25"/> gives the number of
+real multiplications and additions required to calculate a length-N
+FFT of complex data. Results of programs with one, two, three and
+five butterflies are given to show the improvement that can be
+expected from removing unnecessary multiplications and additions.
+Results of radices two, four, eight and sixteen for the Cooley-Tukey
+FFT as well as of the split-radix FFT are given to show the relative
+merits of the various structures. Comparisons of these data should
+be made with the table of counts for the PFA and WFTA programs in
+<link document="m16335" target-id="uid24">The Prime Factor and Winograd Fourier Transform Algorithms: Evaluation of the PFA and WFTA</link>. All programs use the four-multiply-two-add
+complex multiply algorithm. A similar table can be developed for the
+three-multiply-three-add algorithm, but the relative results are the
+same.</para>
+      <para id="id2259458">From the table it is seen that a greater improvement is
+obtained going from radix-2 to 4 than from 4 to 8 or 16. This is
+partly because length 2 and 4 butterflies have no multiplications
+while length 8, 16 and higher do. It is also seen that going from
+one to two butterflies gives more improvement than going from two to
+higher values. From an operation count point of view and from
+practical experience, a three butterfly radix-4 or a two butterfly
+radix-8 FFT is a good compromise. The radix-8 and 16 programs become
+long, especially with multiple butterflies, and they give a limited
+choice of transform length unless combined with some length 2 and 4
+butterflies.</para>
+      <table id="uid25" summary="Large with one header row of descriptions and 37 rows of values below.">
+<tgroup cols="9"><tbody>
+            <row>
+              <entry>N</entry>
+              <entry>M1</entry>
+              <entry>M2</entry>
+              <entry>M3</entry>
+              <entry>M5</entry>
+              <entry>A1</entry>
+              <entry>A2</entry>
+              <entry>A3</entry>
+              <entry>A5</entry>
+            </row>
+            <row>
+              <entry>2</entry>
+              <entry>4</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>6</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+            </row>
+            <row>
+              <entry>4</entry>
+              <entry>16</entry>
+              <entry>4</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>24</entry>
+              <entry>18</entry>
+              <entry>16</entry>
+              <entry>16</entry>
+            </row>
+            <row>
+              <entry>8</entry>
+              <entry>48</entry>
+              <entry>20</entry>
+              <entry>8</entry>
+              <entry>4</entry>
+              <entry>72</entry>
+              <entry>58</entry>
+              <entry>52</entry>
+              <entry>52</entry>
+            </row>
+            <row>
+              <entry>16</entry>
+              <entry>128</entry>
+              <entry>68</entry>
+              <entry>40</entry>
+              <entry>28</entry>
+              <entry>192</entry>
+              <entry>162</entry>
+              <entry>148</entry>
+              <entry>148</entry>
+            </row>
+            <row>
+              <entry>32</entry>
+              <entry>320</entry>
+              <entry>196</entry>
+              <entry>136</entry>
+              <entry>108</entry>
+              <entry>480</entry>
+              <entry>418</entry>
+              <entry>388</entry>
+              <entry>388</entry>
+            </row>
+            <row>
+              <entry>64</entry>
+              <entry>768</entry>
+              <entry>516</entry>
+              <entry>392</entry>
+              <entry>332</entry>
+              <entry>1152</entry>
+              <entry>1026</entry>
+              <entry>964</entry>
+              <entry>964</entry>
+            </row>
+            <row>
+              <entry>128</entry>
+              <entry>1792</entry>
+              <entry>1284</entry>
+              <entry>1032</entry>
+              <entry>908</entry>
+              <entry>2688</entry>
+              <entry>2434</entry>
+              <entry>2308</entry>
+              <entry>2308</entry>
+            </row>
+            <row>
+              <entry>256</entry>
+              <entry>4096</entry>
+              <entry>3076</entry>
+              <entry>2568</entry>
+              <entry>2316</entry>
+              <entry>6144</entry>
+              <entry>5634</entry>
+              <entry>5380</entry>
+              <entry>5380</entry>
+            </row>
+            <row>
+              <entry>512</entry>
+              <entry>9216</entry>
+              <entry>7172</entry>
+              <entry>6152</entry>
+              <entry>5644</entry>
+              <entry>13824</entry>
+              <entry>12802</entry>
+              <entry>12292</entry>
+              <entry>12292</entry>
+            </row>
+            <row>
+              <entry>1024</entry>
+              <entry>20480</entry>
+              <entry>16388</entry>
+              <entry>14344</entry>
+              <entry>13324</entry>
+              <entry>30720</entry>
+              <entry>28674</entry>
+              <entry>27652</entry>
+              <entry>27652</entry>
+            </row>
+            <row>
+              <entry>2048</entry>
+              <entry>45056</entry>
+              <entry>36868</entry>
+              <entry>32776</entry>
+              <entry>30732</entry>
+              <entry>67584</entry>
+              <entry>63490</entry>
+              <entry>61444</entry>
+              <entry>61444</entry>
+            </row>
+            <row>
+              <entry>4096</entry>
+              <entry>98304</entry>
+              <entry>81924</entry>
+              <entry>73736</entry>
+              <entry>69644</entry>
+              <entry>147456</entry>
+              <entry>139266</entry>
+              <entry>135172</entry>
+              <entry>135172</entry>
+            </row>
+            <row>
+              <entry>4</entry>
+              <entry>12</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>22</entry>
+              <entry>16</entry>
+              <entry>16</entry>
+              <entry>16</entry>
+            </row>
+            <row>
+              <entry>16</entry>
+              <entry>96</entry>
+              <entry>36</entry>
+              <entry>28</entry>
+              <entry>24</entry>
+              <entry>176</entry>
+              <entry>146</entry>
+              <entry>144</entry>
+              <entry>144</entry>
+            </row>
+            <row>
+              <entry>64</entry>
+              <entry>576</entry>
+              <entry>324</entry>
+              <entry>284</entry>
+              <entry>264</entry>
+              <entry>1056</entry>
+              <entry>930</entry>
+              <entry>920</entry>
+              <entry>920</entry>
+            </row>
+            <row>
+              <entry>256</entry>
+              <entry>3072</entry>
+              <entry>2052</entry>
+              <entry>1884</entry>
+              <entry>1800</entry>
+              <entry>5632</entry>
+              <entry>5122</entry>
+              <entry>5080</entry>
+              <entry>5080</entry>
+            </row>
+            <row>
+              <entry>1024</entry>
+              <entry>15360</entry>
+              <entry>11268</entry>
+              <entry>10588</entry>
+              <entry>10248</entry>
+              <entry>28160</entry>
+              <entry>26114</entry>
+              <entry>25944</entry>
+              <entry>25944</entry>
+            </row>
+            <row>
+              <entry>4096</entry>
+              <entry>73728</entry>
+              <entry>57348</entry>
+              <entry>54620</entry>
+              <entry>53256</entry>
+              <entry>135168</entry>
+              <entry>126978</entry>
+              <entry>126296</entry>
+              <entry>126296</entry>
+            </row>
+            <row>
+              <entry>8</entry>
+              <entry>32</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>66</entry>
+              <entry>52</entry>
+              <entry>52</entry>
+              <entry>52</entry>
+            </row>
+            <row>
+              <entry>64</entry>
+              <entry>512</entry>
+              <entry>260</entry>
+              <entry>252</entry>
+              <entry>248</entry>
+              <entry>1056</entry>
+              <entry>930</entry>
+              <entry>928</entry>
+              <entry>928</entry>
+            </row>
+            <row>
+              <entry>512</entry>
+              <entry>6144</entry>
+              <entry>4100</entry>
+              <entry>4028</entry>
+              <entry>3992</entry>
+              <entry>12672</entry>
+              <entry>11650</entry>
+              <entry>11632</entry>
+              <entry>11632</entry>
+            </row>
+            <row>
+              <entry>4096</entry>
+              <entry>65536</entry>
+              <entry>49156</entry>
+              <entry>48572</entry>
+              <entry>48280</entry>
+              <entry>135168</entry>
+              <entry>126978</entry>
+              <entry>126832</entry>
+              <entry>126832</entry>
+            </row>
+            <row>
+              <entry>16</entry>
+              <entry>80</entry>
+              <entry>20</entry>
+              <entry>20</entry>
+              <entry>20</entry>
+              <entry>178</entry>
+              <entry>148</entry>
+              <entry>148</entry>
+              <entry>148</entry>
+            </row>
+            <row>
+              <entry>256</entry>
+              <entry>2560</entry>
+              <entry>1540</entry>
+              <entry>1532</entry>
+              <entry>1528</entry>
+              <entry>5696</entry>
+              <entry>5186</entry>
+              <entry>5184</entry>
+              <entry>5184</entry>
+            </row>
+            <row>
+              <entry>4096</entry>
+              <entry>61440</entry>
+              <entry>45060</entry>
+              <entry>44924</entry>
+              <entry>44856</entry>
+              <entry>136704</entry>
+              <entry>128514</entry>
+              <entry>128480</entry>
+              <entry>128480</entry>
+            </row>
+            <row>
+              <entry>2</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+            </row>
+            <row>
+              <entry>4</entry>
+              <entry>8</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>20</entry>
+              <entry>16</entry>
+              <entry>16</entry>
+              <entry>16</entry>
+            </row>
+            <row>
+              <entry>8</entry>
+              <entry>24</entry>
+              <entry>8</entry>
+              <entry>4</entry>
+              <entry>4</entry>
+              <entry>60</entry>
+              <entry>52</entry>
+              <entry>52</entry>
+              <entry>52</entry>
+            </row>
+            <row>
+              <entry>16</entry>
+              <entry>72</entry>
+              <entry>32</entry>
+              <entry>28</entry>
+              <entry>24</entry>
+              <entry>164</entry>
+              <entry>144</entry>
+              <entry>144</entry>
+              <entry>144</entry>
+            </row>
+            <row>
+              <entry>32</entry>
+              <entry>184</entry>
+              <entry>104</entry>
+              <entry>92</entry>
+              <entry>84</entry>
+              <entry>412</entry>
+              <entry>372</entry>
+              <entry>372</entry>
+              <entry>372</entry>
+            </row>
+            <row>
+              <entry>64</entry>
+              <entry>456</entry>
+              <entry>288</entry>
+              <entry>268</entry>
+              <entry>248</entry>
+              <entry>996</entry>
+              <entry>912</entry>
+              <entry>912</entry>
+              <entry>912</entry>
+            </row>
+            <row>
+              <entry>128</entry>
+              <entry>1080</entry>
+              <entry>744</entry>
+              <entry>700</entry>
+              <entry>660</entry>
+              <entry>2332</entry>
+              <entry>2164</entry>
+              <entry>2164</entry>
+              <entry>2164</entry>
+            </row>
+            <row>
+              <entry>256</entry>
+              <entry>2504</entry>
+              <entry>1824</entry>
+              <entry>1740</entry>
+              <entry>1656</entry>
+              <entry>5348</entry>
+              <entry>5008</entry>
+              <entry>5008</entry>
+              <entry>5008</entry>
+            </row>
+            <row>
+              <entry>512</entry>
+              <entry>5688</entry>
+              <entry>4328</entry>
+              <entry>4156</entry>
+              <entry>3988</entry>
+              <entry>12060</entry>
+              <entry>11380</entry>
+              <entry>11380</entry>
+              <entry>11380</entry>
+            </row>
+            <row>
+              <entry>1024</entry>
+              <entry>12744</entry>
+              <entry>10016</entry>
+              <entry>9676</entry>
+              <entry>9336</entry>
+              <entry>26852</entry>
+              <entry>25488</entry>
+              <entry>25488</entry>
+              <entry>25488</entry>
+            </row>
+            <row>
+              <entry>2048</entry>
+              <entry>28216</entry>
+              <entry>22760</entry>
+              <entry>22076</entry>
+              <entry>21396</entry>
+              <entry>59164</entry>
+              <entry>56436</entry>
+              <entry>56436</entry>
+              <entry>56436</entry>
+            </row>
+            <row>
+              <entry>4096</entry>
+              <entry>61896</entry>
+              <entry>50976</entry>
+              <entry>49612</entry>
+              <entry>48248</entry>
+              <entry>129252</entry>
+              <entry>123792</entry>
+              <entry>123792</entry>
+              <entry>123792</entry>
+            </row>
+          </tbody>
+        
+</tgroup><caption>Number of Real Multiplications and Additions for Complex
+Single Radix FFTs</caption>
+</table>
+      <para id="id2261543">In <link target-id="uid25"/> Mi and Ai refer to the number of real multiplications
+and real additions used by an FFT with i separately written butterflies.
+The first block has
+the counts for Radix-2, the second for Radix-4, the third for Radix-8, the
+fourth for Radix-16, and the last for the Split-Radix FFT. For the
+split-radix FFT, M3 and A3 refer to the two- butterfly-plus program
+and M5 and A5 refer to the three-butterfly program.</para>
+      <para id="id2261558">The first evaluations of FFT algorithms were in terms of the
+number of real multiplications required as that was the slowest
+operation on the computer and, therefore, controlled the execution
+speed. Later with hardware arithmetic both the number of
+multiplications and additions became important. Modern systems have
+arithmetic speeds such that indexing and data transfer times become
+important factors. Morris <link target-id="bid18"/> has looked at some of these
+problems and has developed a procedure called autogen to write
+partially straight-line program code to significantly reduce
+overhead and speed up FFT run times. Some hardware, such as the
+TMS320 signal processing chip, has the multiply and add operations
+combined. Some machines have vector instructions or have parallel
+processors. Because the execution speed of an FFT depends not only
+on the algorithm, but also on the hardware architecture and
+compiler, experiments must be run on the system to be used.</para>
+      <para id="id2261582">In many cases the unscrambler or bit-reverse-counter requires
+10% of the execution time, therefore, if possible, it should be
+eliminated. In high-speed convolution where the convolution is done
+by multiplication of DFT's, a decimation-in-frequency FFT can be
+combined with a decimation-in-time inverse FFT to require no
+unscrambler. It is also possible for a radix-2 FFT to do the
+unscrambling inside the FFT but the structure is not very regular
+<link target-id="bid3"/>, <link target-id="bid19"/>. Special structures can be found in <link target-id="bid3"/> and
+programs for data that are real or have special symmetries are in
+<link target-id="bid7"/>, <link target-id="bid13"/>, <link target-id="bid8"/>.</para>
+      <para id="id2261628">Although there can be significant differences in the
+efficiencies of the various Cooley-Tukey and Split-Radix FFTs, the
+number of multiplications and additions for all of them is on the
+order of <m:math><m:mrow><m:mi>N</m:mi><m:mo form="prefix">log</m:mo><m:mi>N</m:mi></m:mrow></m:math>. That is fundamental to the class of algorithms.</para>
+    </section>
+    <section id="uid26">
+      <title>The Quick Fourier Transform, An FFT based on Symmetries</title>
+      <para id="id2261662">The development of fast algorithms usually consists of using special
+properties of the algorithm of interest to remove redundant or unnecessary
+operations of a direct implementation. The discrete Fourier transform
+(DFT) defined by</para>
+      <equation id="uid27"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="0.166667em"/>
+            <m:msubsup>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msubsup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261741">where</para>
+      <equation id="uid28">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mi>W</m:mi>
+              <m:mi>N</m:mi>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>e</m:mi>
+              <m:mrow>
+                <m:mo>-</m:mo>
+                <m:mi>j</m:mi>
+                <m:mn>2</m:mn>
+                <m:mi>π</m:mi>
+                <m:mo>/</m:mo>
+                <m:mi>N</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2261788">has enormous capacity for improvement of its arithmetic efficiency. Most
+fast algorithms use the periodic and symmetric properties of its basis
+functions. The classical Cooley-Tukey FFT and prime factor FFT <link target-id="bid5"/>
+exploit the periodic properties of the cosine and sine functions. Their
+use of the periodicities to share and, therefore, reduce arithmetic
+operations depends on the factorability of the length of the data to be
+transformed. For highly composite lengths, the number of floating-point
+operation is of order <m:math><m:mrow><m:mi>N</m:mi><m:mspace width="0.166667em"/><m:mo form="prefix">log</m:mo><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math> and for prime lengths it is of order
+<m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math>.</para>
+      <para id="id2261848">This section will look at an approach using the symmetric properties to
+remove redundancies. This possibility has long been recognized
+<link target-id="bid20"/>, <link target-id="bid21"/>, <link target-id="bid22"/>, <link target-id="bid23"/> but has not been developed in any
+systematic way in the open literature. We will develop an algorithm,
+called the quick Fourier transform (QFT) <link target-id="bid21"/>, that will reduce
+the number of floating point operations necessary to compute the DFT by a
+factor of two to four over direct methods or Goertzel's method for prime
+lengths. Indeed, it seems the best general algorithm available for prime
+length DFTs. One can always do better by using Winograd type algorithms
+but they must be individually designed for each length.  The Chirp Z-transform can be used for longer lengths.</para>
+      <section id="uid29">
+        <title>Input and Output Symmetries</title>
+        <para id="id2261898">We use the fact that the cosine is an even function and the sine is an odd
+function. The kernel of the DFT or the basis functions of the expansion is
+given by</para>
+        <equation id="uid30">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msubsup>
+                <m:mi>W</m:mi>
+                <m:mi>N</m:mi>
+                <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mi>k</m:mi>
+                </m:mrow>
+              </m:msubsup>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>e</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mi>j</m:mi>
+                  <m:mn>2</m:mn>
+                  <m:mi>π</m:mi>
+                  <m:mi>n</m:mi>
+                  <m:mi>k</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>=</m:mo>
+              <m:mo form="prefix">cos</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>π</m:mi>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+                <m:mo>/</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mo form="prefix">sin</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mi>π</m:mi>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+                <m:mo>/</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262012">which has an even real part and odd imaginary part. If the data <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> are
+decomposed into their real and imaginary parts and those into their even and
+odd parts, we have</para>
+        <equation id="uid31">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>u</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mi>v</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>u</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>u</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>]</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262172">where the even part of the real part of <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> is given by</para>
+        <equation id="uid32">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>u</m:mi>
+                <m:mi>e</m:mi>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>u</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>+</m:mo>
+                <m:mi>u</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mo>-</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>/</m:mo>
+              <m:mn>2</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262258">and the odd part of the real part is</para>
+        <equation id="uid33">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mi>u</m:mi>
+                <m:mi>o</m:mi>
+              </m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>u</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>-</m:mo>
+                <m:mi>u</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mo>-</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>/</m:mo>
+              <m:mn>2</m:mn>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262327">with corresponding definitions of <m:math><m:mrow><m:msub><m:mi>v</m:mi><m:mi>e</m:mi></m:msub><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math> and <m:math><m:mrow><m:msub><m:mi>v</m:mi><m:mi>o</m:mi></m:msub><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:mrow></m:math>.
+Using <link document="m16339" target-id="uid57">Convolution Algorithms: Equation 32</link> with a simpler notation, the DFT of <link document="m16339" target-id="uid54">Convolution Algorithms: Equation 29</link> becomes</para>
+        <equation id="uid34"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>u</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>j</m:mi>
+                <m:mspace width="0.166667em"/>
+                <m:mi>v</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>-</m:mo>
+                <m:mi>j</m:mi>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262467">The sum over an integral number of periods of an odd function is zero and
+the sum of an even function over half of the period is one half the sum
+over the whole period. This causes <link target-id="uid27"/> and <link target-id="uid34"/> to become</para>
+        <equation id="uid35"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>u</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2262620">for <m:math><m:mrow><m:mi>k</m:mi><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>.</para>
+        <para id="id2262662">The evaluation of the DFT using equation <link target-id="uid35"/> requires half as many
+real multiplication and half as many real additions as evaluating it using
+<link target-id="uid27"/> or <link target-id="uid34"/>. We have exploited the symmetries of the sine and
+cosine as functions of the time index <m:math><m:mi>n</m:mi></m:math>. This is independent of whether
+the length is composite or not. Another view of this formulation is that
+we have used the property of associatively of multiplication and addition.
+In other words, rather than multiply two data points by the same value of
+a sine or cosine then add the results, one should add the data points
+first then multiply the sum by the sine or cosine which requires one
+rather than two multiplications.</para>
+        <para id="id2255372">Next we take advantage of the symmetries of the sine and cosine as
+functions of the frequency index <m:math><m:mi>k</m:mi></m:math>. Using these symmetries on <link target-id="uid35"/>
+gives</para>
+        <equation id="uid36"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>u</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <equation id="uid37"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>u</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>-</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>j</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>e</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">cos</m:mo>
+                <m:mo>+</m:mo>
+                <m:msub>
+                  <m:mi>v</m:mi>
+                  <m:mi>o</m:mi>
+                </m:msub>
+                <m:mspace width="0.166667em"/>
+                <m:mo form="prefix">sin</m:mo>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2263127">for <m:math><m:mrow><m:mi>k</m:mi><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mn>2</m:mn><m:mo>,</m:mo><m:mo>⋯</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math>. This again reduces the number of
+operations by a factor of two, this time because it calculates two output
+values at a time. The first reduction by a factor of two is always
+available. The second is possible only if both DFT values are needed. It
+is not available if you are calculating only one DFT value. The above
+development has not dealt with the details that arise with the difference
+between an even and an odd length. That is straightforward.</para>
+      </section>
+      <section id="uid38">
+        <title>Further Reductions if the Length is Even</title>
+        <para id="id2263191">If the length of the sequence to be transformed is even, there are further
+symmetries that can be exploited. There will be four data values that are
+all multiplied by plus or minus the same sine or cosine value. This means
+a more complicated pre-addition process which is a generalization of the
+simple calculation of the even and odd parts in <link target-id="uid32"/> and <link target-id="uid33"/>
+will reduce the size of the order <m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> part of the algorithm by still
+another factor of two or four. It the length is divisible by 4, the
+process can be repeated. Indeed, it the length is a power of 2, one can
+show this process is equivalent to calculating the DFT in terms of
+discrete cosine and sine transforms <link target-id="bid24"/>, <link target-id="bid25"/> with a resulting
+arithmetic complexity of order <m:math><m:mrow><m:mi>N</m:mi><m:mspace width="0.166667em"/><m:mo form="prefix">log</m:mo><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math> and with a structure that is
+well suited to real data calculations and pruning.</para>
+        <para id="id2263267">If the flow-graph of the Cooley-Tukey FFT is compared to the flow-graph of
+the QFT, one notices both similarities and differences. Both progress in
+stages as the length is continually divided by two. The Cooley-Tukey
+algorithm uses the periodic properties of the sine and cosine to give the
+familiar horizontal tree of butterflies. The parallel diagonal lines in
+this graph represent the parallel stepping through the data in synchronism
+with the periodic basis functions. The QFT has diagonal lines that
+connect the first data point with the last, then the second with the next
+to last, and so on to give a “star" like picture. This is interesting in
+that one can look at the flow graph of an algorithm developed by some
+completely different strategy and often find section with the parallel
+structures and other parts with the star structure. These must be using
+some underlying periodic and symmetric properties of the basis functions.</para>
+      </section>
+      <section id="uid39">
+        <title>Arithmetic Complexity and Timings</title>
+        <para id="id2263310">A careful analysis of the QFT shows that <m:math><m:mrow><m:mn>2</m:mn><m:mi>N</m:mi></m:mrow></m:math> additions are necessary to
+compute the even and odd parts of the input data. This is followed by the
+length <m:math><m:mrow><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:math> inner product that requires <m:math><m:mrow><m:mn>4</m:mn><m:msup><m:mrow><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>)</m:mo></m:mrow><m:mn>2</m:mn></m:msup><m:mo>=</m:mo><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:mrow></m:math> real
+multiplications and an equal number of additions. This is followed by the
+calculations necessary for the simultaneous calculations of the first half
+and last half of <m:math><m:mrow><m:mi>C</m:mi><m:mo>(</m:mo><m:mi>k</m:mi><m:mo>)</m:mo></m:mrow></m:math> which requires <m:math><m:mrow><m:mn>4</m:mn><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>2</m:mn><m:mi>N</m:mi></m:mrow></m:math> real additions. This
+means the total QFT algorithm requires <m:math><m:msup><m:mi>M</m:mi><m:mn>2</m:mn></m:msup></m:math> real multiplications and <m:math><m:mrow><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup><m:mo>+</m:mo><m:mn>4</m:mn><m:mi>N</m:mi></m:mrow></m:math> real additions. These numbers along with those for the Goertzel
+algorithm <link target-id="bid26"/>, <link target-id="bid5"/>, <link target-id="bid23"/> and the direct calculation of the DFT are
+included in the following table. Of the various order-<m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> DFT
+algorithms, the QFT seems to be the most efficient general method for an
+arbitrary length <m:math><m:mi>N</m:mi></m:math>.</para>
+<!--empty paragraphs get left behind.-->
+        <table id="id2263513" summary="">
+          <tgroup cols="4">
+            <tbody>
+              <row>
+                <entry>Algorithm</entry>
+                <entry>Real Mults.</entry>
+                <entry>Real Adds</entry>
+                <entry>Trig Eval.</entry>
+              </row>
+              <row>
+                <entry/>
+                <entry/>
+                <entry/>
+                <entry/>
+              </row>
+              <row>
+                <entry>Direct DFT</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>Mod. 2nd Order Goertzel</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mi>N</m:mi>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>QFT</entry>
+                <entry>
+                  <m:math>
+                    <m:msup>
+                      <m:mi>N</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msup>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mn>4</m:mn>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry/>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+<!--empty paragraphs get left behind.-->
+        <para id="id2263786">Timings of the algorithms on a PC in milliseconds are given in the
+following table.</para>
+        <table id="id2263793" summary="">
+          <tgroup cols="3">
+            <tbody>
+              <row>
+                <entry>Algorithm</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>N</m:mi>
+                      <m:mo>=</m:mo>
+                      <m:mn>125</m:mn>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>N</m:mi>
+                      <m:mo>=</m:mo>
+                      <m:mn>256</m:mn>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry/>
+                <entry/>
+                <entry/>
+              </row>
+              <row>
+                <entry>Direct DFT</entry>
+                <entry>4.90</entry>
+                <entry>19.83</entry>
+              </row>
+              <row>
+                <entry>Mod. 2O. Goertzel</entry>
+                <entry>1.32</entry>
+                <entry>5.55</entry>
+              </row>
+              <row>
+                <entry>QFT</entry>
+                <entry>1.09</entry>
+                <entry>4.50</entry>
+              </row>
+              <row>
+                <entry>Chirp + FFT</entry>
+                <entry>1.70</entry>
+                <entry>3.52</entry>
+              </row>
+              <row>
+                <entry/>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <para id="id2263931">These timings track the floating point operation counts fairly well.</para>
+      </section>
+      <section id="uid40">
+        <title>Conclusions</title>
+        <para id="id2263946">The QFT is a straight-forward DFT algorithm that uses all of the possible
+symmetries of the DFT basis function with no requirements on the length
+being composite. These ideas have been proposed before, but have not been
+published or clearly developed by <link target-id="bid21"/>, <link target-id="bid22"/>, <link target-id="bid27"/>, <link target-id="bid28"/>.
+It seems that the basic QFT is practical and useful as a general algorithm
+for lengths up to a hundred or so. Above that, the chirp z-transform
+<link target-id="bid5"/> or other filter based methods will be superior. For special
+cases and shorter lengths, methods based on Winograd's theories will
+always be superior. Nevertheless, the QFT has a definite place in the
+array of DFT algorithms and is not well known. A Fortran program is
+included in the appendix.</para>
+        <para id="id2263989">It is possible, but unlikely, that further arithmetic reduction could be
+achieved using the fact that <m:math><m:msub><m:mi>W</m:mi><m:mi>N</m:mi></m:msub></m:math> has unity magnitude as was done in
+second-order Goertzel algorithm. It is also possible that some way of
+combining the Goertzel and QFT algorithm would have some advantages. A
+development of a complete QFT decomposition of a DFT of length-<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math>
+shows interesting structure <link target-id="bid24"/>, <link target-id="bid25"/> and arithmetic complexity
+comparable to average Cooley-Tukey FFTs. It does seem better suited to
+real data calculations with pruning.</para>
+      </section>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid5">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Brigham, E. Oran</bib:author>
+        <bib:title>The Fast Fourier Transform and Its Applications</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note>Expansion of the 1974 book</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid26">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>Goertzel's Algorithm</bib:title>
+        <bib:institution>ECE Dept., Rice University</bib:institution>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:type>Unpublished Notes</bib:type>
+        <bib:number/>
+        <bib:address/>
+        <bib:month/>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, James W. and Lewis, Peter A. W. and Welch, Peter D.</bib:author>
+        <bib:title>Historical Notes on the Fast Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Audio and Electroacoustics</bib:journal>
+        <bib:year>1967</bib:year>
+<!--optional fields-->
+        <bib:volume>15</bib:volume>
+        <bib:number/>
+        <bib:pages>260–262</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W. and Tukey, J. W.</bib:author>
+        <bib:title>An Algorithm for the Machine Calculation of Complex Fourier Series</bib:title>
+        <bib:journal>Math. Computat.</bib:journal>
+        <bib:year>1965</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>297–301</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>DSP Committee, </bib:editor>
+        <bib:title>Digital Signal Processing II, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Hollmann, H.</bib:author>
+        <bib:title>Split Radix FFT Algorithm</bib:title>
+        <bib:journal>Electronic Letters</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>14–16</bib:pages>
+        <bib:month>January 5</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P.</bib:author>
+        <bib:title>Implementation of `Split-Radix' FFT Algorithms for Complex, Real, and Real-Symmetric Data</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number/>
+        <bib:pages>285–295</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note>A shorter version appeared in the ICASSP-85 Proceedings, p. 20.6, March 1985</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Vetterli, M.</bib:author>
+        <bib:title>Cyclic Convolution of Real Sequences: Hartley versus Fourier and New Schemes</bib:title>
+        <bib:journal>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP-86)</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:number/>
+        <bib:pages>6.5</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid24">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Discrete Fourier Transform</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>III:445–448</bib:pages>
+        <bib:address>IEEE ICASSP-94, Adelaide, Australia</bib:address>
+        <bib:month>April 19–22</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid25">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Fourier Transform: an FFT based on Symmetries</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:volume>46</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>335–341</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid28">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Heideman, M. T.</bib:author>
+        <bib:title>private communication</bib:title>
+        <bib:howpublished/>
+        <bib:month/>
+        <bib:year>1985</bib:year>
+        <bib:note/>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, D. H. and Burrus, C. S.</bib:author>
+        <bib:title>Gauss and the History of the FFT</bib:title>
+        <bib:journal>Archive for History of Exact Sciences</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>265–277</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>An In-Order, In-Place Radix-2 FFT</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.2.1–4</bib:pages>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Steven G. and Frigo, Matteo</bib:author>
+        <bib:title>A Modified Split-Radix FFT with Fewer Arithmetic Operations</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume>55</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>111–119</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid21">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Kohne, John F.</bib:author>
+        <bib:title>A Quick Fourier Transform Algorithm</bib:title>
+        <bib:institution>Naval Electronics Laboratory Center</bib:institution>
+        <bib:year>1980</bib:year>
+<!--optional fields-->
+        <bib:type>Technical report</bib:type>
+        <bib:number>TR-1723</bib:number>
+        <bib:address/>
+        <bib:month>July</bib:month>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Markel, J. D.</bib:author>
+        <bib:title>FFT Pruning</bib:title>
+        <bib:journal>IEEE Trans on Audio and Electroacoustics</bib:journal>
+        <bib:year>1971</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>305–311</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Martens, J. B.</bib:author>
+        <bib:title>Recursive Cyclotomic Factorization – A New Algorithm for Calculating the Discrete Fourier Transform</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>750–762</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Morris, L. R.</bib:author>
+        <bib:title>Digital Signal Processing Software</bib:title>
+        <bib:publisher>DSPSW, Inc.</bib:publisher>
+        <bib:year>1982, 1983</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Toronto, Canada</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid23">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note>Earlier editions in 1975 and 1989</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Rabiner, L. R. and Gold, B.</bib:author>
+        <bib:title>Theory and Application of Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1975</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>On Computing the Split–Radix FFT</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>152–156</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid27">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Sitton, G. A.</bib:author>
+        <bib:title>The QFT Algorithm</bib:title>
+        <bib:howpublished/>
+        <bib:month/>
+        <bib:year>1985</bib:year>
+        <bib:note/>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid22">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Sitton, G. A.</bib:author>
+        <bib:title>The QDFT: An Efficient Method for Short Prime Length DFTs</bib:title>
+        <bib:howpublished/>
+        <bib:month>June</bib:month>
+        <bib:year>1991</bib:year>
+        <bib:note/>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Burrus, C. S. and Heideman, M. T.</bib:author>
+        <bib:title>On Computing the Discrete Hartley Transform</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>33</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1231–1238</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>Real Valued Fast Fourier Transform Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>849–863</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Vetterli, Martin and Nussbaumer, H. J.</bib:author>
+        <bib:title>Simple FFT and DCT Algorithms with Reduced Number of Operations</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>6</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>267–278</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Yavne, R.</bib:author>
+        <bib:title>An Economical Method for Calculating the Discrete Fourier Transform</bib:title>
+        <bib:booktitle>Fall Joint Computer Conference, AFIPS Conference Proceedings</bib:booktitle>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>33 part 1</bib:volume>
+        <bib:series/>
+        <bib:pages>115–125</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+  </bib:file>
+</document>

@@ -1,0 +1,2045 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Comments: Fast Fourier Transforms</title>
+  <metadata>
+  <md:content-id>m16434</md:content-id><md:title>Comments: Fast Fourier Transforms</md:title>
+  <md:abstract/>
+  <md:uuid>ddb54fb1-e238-4c89-8a10-e0b4314ebd45</md:uuid>
+</metadata>
+
+<content>
+    <section id="uid1">
+      <title>Other work and Results</title>
+      <para id="id2255549">This section comes from a note describing results on efficient algorithms to
+calculate the discrete Fourier transform (DFT) that were collected over years.
+Perhaps the most interesting is the discovery that the Cooley-Tukey
+FFT was described by Gauss in 1805 <link target-id="bid0"/>. That gives some
+indication of the age of research on the topic, and the fact that a
+1995 compiled bibliography <link target-id="bid1"/> on efficient algorithms
+contains over 3400 entries indicates its volume. Three IEEE Press
+reprint books contain papers on the FFT <link target-id="bid2"/>, <link target-id="bid3"/>, <link target-id="bid4"/>. An
+excellent general purpose FFT program has been described in
+<link target-id="bid5"/>, <link target-id="bid6"/> and is used in Matlab and available over the internet. </para>
+      <para id="id2255599">In addition to this book there are several others
+<link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>, <link target-id="bid10"/>, <link target-id="bid11"/>, <link target-id="bid12"/>, <link target-id="bid13"/>, <link target-id="bid14"/>, <link target-id="bid15"/>
+that give a good modern theoretical background for the FFT, one book
+<link target-id="bid16"/> that gives the basic theory plus both FORTRAN and TMS 320
+assembly language programs, and other books <link target-id="bid17"/>, <link target-id="bid18"/>, <link target-id="bid19"/>
+that contain chapters on advanced FFT topics. 
+A good up-to-date, on-line reference with both theory and programming techniques is in <link target-id="bid777"/>.
+The history of the FFT is
+outlined in <link target-id="bid20"/>, <link target-id="bid0"/> and excellent survey articles can be
+found in <link target-id="bid21"/>, <link target-id="bid22"/>. The foundation of much of the modern work
+on efficient algorithms was done by S. Winograd. These results can be found in
+<link target-id="bid23"/>, <link target-id="bid24"/>, <link target-id="bid25"/>. An outline and discussion of his theorems can
+be found in <link target-id="bid17"/> as well as <link target-id="bid7"/>, <link target-id="bid8"/>, <link target-id="bid9"/>, <link target-id="bid10"/>.</para>
+      <para id="id2255747">Efficient FFT algorithms for length-<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math> were described by Gauss
+and discovered in modern times by Cooley and Tukey <link target-id="bid26"/>. These
+have been highly developed and good examples of FORTRAN programs can
+be found in <link target-id="bid16"/>. Several new algorithms have been published
+that require the least known amount of total arithmetic
+<link target-id="bid27"/>, <link target-id="bid28"/>, <link target-id="bid29"/>, <link target-id="bid30"/>, <link target-id="bid31"/>, <link target-id="bid32"/>. Of these, the
+split-radix FFT <link target-id="bid28"/>, <link target-id="bid29"/>, <link target-id="bid33"/>, <link target-id="bid34"/> seems to have the
+best structure for programming, and an efficient program has been
+written <link target-id="bid35"/> to implement it. A mixture of
+decimation-in-time and decimation-in-frequency with very good
+efficiency is given in <link target-id="bid36"/>, <link target-id="bid37"/> and one called the Sine-Cosine
+FT <link target-id="bid32"/>. Recently a modification to the split-radix algorithm
+has been described <link target-id="bid38"/> that has a slightly better
+total arithmetic count. Theoretical bounds on the number of
+multiplications required for the FFT based on Winograd's theories
+are given in <link target-id="bid10"/>, <link target-id="bid39"/>. Schemes for calculating an
+in-place, in-order radix-2 FFT are given in
+<link target-id="bid40"/>, <link target-id="bid41"/>, <link target-id="bid42"/>, <link target-id="bid43"/>. Discussion of various forms of
+unscramblers is given in
+<link target-id="bid44"/>, <link target-id="bid45"/>, <link target-id="bid46"/>, <link target-id="bid47"/>, <link target-id="bid48"/>, <link target-id="bid49"/>, <link target-id="bid50"/>, <link target-id="bid51"/>, <link target-id="bid52"/>. A
+discussion of the relation of the computer architecture, algorithm
+and compiler can be found in <link target-id="bid53"/>, <link target-id="bid54"/>. A modification to
+allow lengths of <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mi>q</m:mi><m:mspace width="0.166667em"/><m:msup><m:mn>2</m:mn><m:mi>m</m:mi></m:msup></m:mrow></m:math> for <m:math><m:mi>q</m:mi></m:math> odd is given in <link target-id="bid55"/>.</para>
+      <para id="id2256005">The “other” FFT is the prime factor algorithm (PFA) which uses an index
+map originally developed by Thomas and by Good. The theory of the PFA
+was derived in <link target-id="bid56"/> and further developed and an efficient
+in-order and in-place program given in <link target-id="bid57"/>, <link target-id="bid16"/>. More results
+on the PFA are given in
+<link target-id="bid58"/>, <link target-id="bid59"/>, <link target-id="bid43"/>, <link target-id="bid60"/>, <link target-id="bid61"/>. A method has
+been developed to use dynamic programming to design optimal FFT programs
+that minimize the number of additions and data transfers as well as
+multiplications <link target-id="bid62"/>. This new approach designs custom
+algorithms for a particular computer architecture. An efficient and
+practical development of Winograd's ideas has given a design method that
+does not require the rather difficult Chinese remainder theorem
+<link target-id="bid17"/>, <link target-id="bid63"/> for short prime length FFT's. These ideas have been used
+to design modules of length 11, 13, 17, 19, and 25 <link target-id="bid64"/>. Other
+methods for designing short DFT's can be found in <link target-id="bid65"/>, <link target-id="bid66"/>.
+A use of these ideas with distributed arithmetic and table look-up rather
+than multiplication is given in <link target-id="bid67"/>. A program that implements
+the nested Winograd Fourier transform algorithm (WFTA) is given in
+<link target-id="bid7"/> but it has not proven as fast or as versatile as the PFA
+<link target-id="bid57"/>. An interesting use of the PFA was announced <link target-id="bid68"/>
+in searching for large prime numbers.</para>
+      <para id="id2256126">These efficient algorithms can not only be used on DFT's but on other
+transforms with a similar structure. They have been applied to the
+discrete Hartley transform <link target-id="bid69"/>, <link target-id="bid70"/> and the discrete cosine
+transform <link target-id="bid31"/>, <link target-id="bid71"/>, <link target-id="bid72"/>.</para>
+      <para id="id2256159">The fast Hartley transform has been proposed as a superior method for real
+data analysis but that has been shown not to be the case. A well-designed
+real-data FFT <link target-id="bid73"/> is always as good as or better than a
+well-designed Hartley transform <link target-id="bid69"/>, <link target-id="bid74"/>, <link target-id="bid75"/>, <link target-id="bid76"/>, <link target-id="bid77"/>.
+The Bruun algorithm <link target-id="bid78"/>, <link target-id="bid79"/> also looks promising for real data
+applications as does the Rader-Brenner algorithm
+<link target-id="bid80"/>, <link target-id="bid81"/>, <link target-id="bid76"/>. A novel approach to calculating the inverse
+DFT is given in <link target-id="bid82"/>.</para>
+      <para id="id2256232">General length algorithms include <link target-id="bid83"/>, <link target-id="bid84"/>, <link target-id="bid85"/>. For
+lengths that are not highly composite or prime, the chirp z-transform in a
+good candidate <link target-id="bid16"/>, <link target-id="bid86"/> for longer lengths and an efficient
+order-<m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> algorithm called the QFT <link target-id="bid87"/>, <link target-id="bid88"/>, <link target-id="bid89"/> for shorter
+lengths. A method which automatically generates near-optimal prime length
+Winograd based programs has been given in <link target-id="bid63"/>, <link target-id="bid90"/>, <link target-id="bid91"/>, <link target-id="bid92"/>, <link target-id="bid93"/>.
+This gives the same efficiency for shorter lengths (i.e. <m:math><m:mrow><m:mi>N</m:mi><m:mo>≤</m:mo><m:mn>19</m:mn></m:mrow></m:math>) and
+new algorithms for much longer lengths and with well-structured
+algorithms. Another approach is given in <link target-id="bid94"/>.
+Special methods are available for very long lengths <link target-id="bid95"/>, <link target-id="bid96"/>.
+A very interesting general length FFT system
+called the FFTW has been developed by Frigo and Johnson at MIT. It uses
+a library of efficient “codelets" which are composed for a very efficient
+calculation of the DFT on a wide variety of computers <link target-id="bid5"/>, <link target-id="bid6"/>, <link target-id="bid97"/>.
+For most lengths and on most computers, this is the fastest FFT today.
+Surprisingly, it uses a recursive program structure. The FFTW won the 1999
+Wilkinson Prize for Numerical Software.</para>
+      <para id="id2256384">The use of the FFT to calculate discrete convolution was one of its
+earliest uses. Although the more direct rectangular transform
+<link target-id="bid98"/> would seem to be more efficient, use of the FFT or PFA is
+still probably the fastest method on a general purpose computer or DSP
+chip <link target-id="bid99"/>, <link target-id="bid73"/>, <link target-id="bid74"/>, <link target-id="bid100"/>. On special purpose hardware
+or special architectures, the use of distributed
+arithmetic <link target-id="bid67"/> or number theoretic transforms <link target-id="bid101"/>
+may be even faster. Special algorithms for use with the
+short-time Fourier transform <link target-id="bid102"/> and for the calculation of a
+few DFT values <link target-id="bid103"/>, <link target-id="bid104"/>, <link target-id="bid105"/> and for recursive implementation
+<link target-id="bid106"/>, <link target-id="bid6"/> have also been developed. An excellent analysis of efficient
+programming the FFT on DSP microprocessors is given in <link target-id="bid107"/>, <link target-id="bid54"/>.
+Formulations of the DFT in terms of tensor or Kronecker products look
+promising for developing algorithms for parallel and vector computer
+architectures <link target-id="bid108"/>, <link target-id="bid11"/>, <link target-id="bid109"/>, <link target-id="bid110"/>, <link target-id="bid111"/>, <link target-id="bid112"/>, <link target-id="bid113"/>.</para>
+      <para id="id2256517">Various approaches to calculating approximate DFTs have been based on
+cordic methods, short word lengths, or some form of pruning. A new method
+that uses the characteristics of the signals being transformed has
+combined the discrete wavelet transform (DWT) combined with the DFT to
+give an approximate FFT with <m:math><m:mrow><m:mi>O</m:mi><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math> multiplications
+<link target-id="bid114"/>, <link target-id="bid115"/>, <link target-id="bid116"/> for certain signal classes. A similar
+approach has been developed using filter banks <link target-id="bid117"/>, <link target-id="bid118"/>.</para>
+      <para id="id2256570">The study of efficient algorithms not only has a long history and large
+bibliography, it is still an exciting research field where new results
+are used in practical applications.</para>
+      <para id="id2256576">More information can be found on the     
+<link url="http://www-dsp.rice.edu"> Rice DSP Group's web page</link></para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid101">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Agarwal, R. C. and Burrus, C. S.</bib:author>
+        <bib:title>Number Theoretic Transforms to Implement Fast Digital Convolution</bib:title>
+        <bib:journal>Proceedings of the IEEE</bib:journal>
+        <bib:year>1975</bib:year>
+<!--optional fields-->
+        <bib:volume>63</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>550–560</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note>also in IEEE Press DSP Reprints II, 1979</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid98">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Agarwal, R. C. and Cooley, J. W.</bib:author>
+        <bib:title>New Algorithms for Digital Convolution</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1977</bib:year>
+<!--optional fields-->
+        <bib:volume>25</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>392–410</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+
+  <bib:entry id="bid777">
+    <bib:book>
+      <bib:author>Arndt, Jörg</bib:author>
+      <bib:title>Algorithms for Programmers: Ideas and Source Code</bib:title>
+      <bib:publisher>
+         http://www.jjj.de/fxt/
+      </bib:publisher>
+      <bib:year>2008</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Bayreuth, Germany</bib:address>
+        <bib:edition/>
+        <bib:month/>
+      <bib:note>
+        FFT book available on-line, 1000 pages, continually updated
+      </bib:note>
+      </bib:book>
+    </bib:entry>
+
+    <bib:entry id="bid55">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bi, Guoan and Chen, Yan Qiu</bib:author>
+        <bib:title>Fast DFT Algorithms for Length <!--Math is not currently allowed within BibTeXML.--></bib:title>
+        <bib:journal>IEEE Transactions on Circuits and Systems – II</bib:journal>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:volume>45</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>685–690</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid57">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Eschenbacher, P. W.</bib:author>
+        <bib:title>An In–Place, In–Order Prime Factor FFT Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:volume>29</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>806–817</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note>Reprinted in it DSP Software, by L.R. Morris, 1983</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid41">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Beard, James K.</bib:author>
+        <bib:title>The FFT in the 21st Century: Eigenspace Processing</bib:title>
+        <bib:publisher>Kluwer</bib:publisher>
+        <bib:year>2003</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Boston</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid40">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Beard, James K.</bib:author>
+        <bib:title>An In-Place, Self-Reordering FFT</bib:title>
+        <bib:booktitle>Proceedings of the ICASSP-78</bib:booktitle>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>632-633</bib:pages>
+        <bib:address>Tulsa</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid116">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. Sidney and Gopinath, Ramesh A. and Guo, Haitao</bib:author>
+        <bib:title>Introduction to Wavelets and the Wavelet Transform</bib:title>
+        <bib:publisher>Prentice Hall</bib:publisher>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Upper Saddle River, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Briggs, William L. and Henson, Van Emden</bib:author>
+        <bib:title>The DFT: An Owner's Manual for the Discrete Fourier Transform</bib:title>
+        <bib:publisher>SIAM</bib:publisher>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Philadelphia</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Blahut, R. E.</bib:author>
+        <bib:title>Fast Algorithms for Digital Signal Processing</bib:title>
+        <bib:publisher>Addison-Wesley, Inc.</bib:publisher>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Reading, MA</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Blahut, Richard E.</bib:author>
+        <bib:title>Algebraic Methods for Signal Processing and Communications Coding</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid70">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Bracewell, R. N.</bib:author>
+        <bib:title>The Hartley Transform</bib:title>
+        <bib:publisher>Oxford Press</bib:publisher>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid78">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bruun, G.</bib:author>
+        <bib:title>z-Transform DFT Filters and FFTs</bib:title>
+        <bib:journal>IEEE Transactions on ASSP</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>26</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>56–63</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:incollection>
+<!--required fields-->
+        <bib:author>Burrus, C. Sidney and Selesnick, Ivan W.</bib:author>
+        <bib:title>Fast Convolution and Filtering</bib:title>
+        <bib:booktitle>The Digital Signal Processing Handbook</bib:booktitle>
+        <bib:publisher>CRC Press</bib:publisher>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:editor>Madisetti, V. K. and Williams, D. B.</bib:editor>
+        <bib:number/>
+        <bib:series/>
+        <bib:type/>
+        <bib:chapter>8</bib:chapter>
+        <bib:pages/>
+        <bib:address>Boca Raton</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:incollection>
+    </bib:entry>
+    <bib:entry id="bid44">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>Unscrambling for Fast DFT Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume>36</bib:volume>
+        <bib:number>7</bib:number>
+        <bib:pages>1086–1087</bib:pages>
+        <bib:month>July</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid32">
+      <bib:mastersthesis>
+<!--required fields-->
+        <bib:author>Byam, Iain R.</bib:author>
+        <bib:title>A New Fast Fourier Transform Algorithm</bib:title>
+        <bib:school>University of the West Indies (UWI)</bib:school>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:type>Technical report</bib:type>
+        <bib:address>St. Augustine, Trinidad</bib:address>
+        <bib:month>June</bib:month>
+        <bib:note>A short version is in Technical Report PG-99001, ECE Dept., Univ. of the West Indies, Aug. 1999</bib:note>
+      </bib:mastersthesis>
+    </bib:entry>
+    <bib:entry id="bid67">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Chu, Shuni and Burrus, C. S.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm using Distributed Arithmetic</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>30</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>217–227</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid68">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Chen, K. T.</bib:author>
+        <bib:title>A New Record: The Largest Known Prime Number</bib:title>
+        <bib:journal>IEEE Spectrum</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>27</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>47</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid22">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Cooley, James W.</bib:author>
+        <bib:title>The Structure of FFT Algorithms</bib:title>
+        <bib:howpublished/>
+        <bib:month>April</bib:month>
+        <bib:year>1990</bib:year>
+        <bib:note>Notes for a Tutorial at IEEE ICASSP-90</bib:note>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W.</bib:author>
+        <bib:title>How the FFT Gained Acceptance</bib:title>
+        <bib:journal>IEEE Signal Processing Magazine</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>9</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>10–13</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note>Also presented at the ACM Conference on the History of Scientific and Numerical Computation, Princeton, NJ, May 1987 and published in: A History of Scientific Computing, edited by S. G. Nash, Addison-Wesley, 1990, pp. 133-140.</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid26">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W. and Tukey, J. W.</bib:author>
+        <bib:title>An Algorithm for the Machine Calculation of Complex Fourier Series</bib:title>
+        <bib:journal>Math. Computat.</bib:journal>
+        <bib:year>1965</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>297–301</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid81">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Cho, K. M. and Temes, G. C.</bib:author>
+        <bib:title>Real-factor FFT Algorithms</bib:title>
+        <bib:booktitle>Proceedings of IEEE ICASSP-78</bib:booktitle>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>634-637</bib:pages>
+        <bib:address>Tulsa, OK</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>DSP Committee, </bib:editor>
+        <bib:title>Digital Signal Processing II, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>DSP Committee, </bib:editor>
+        <bib:title>Programs for Digital Signal Processing</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid28">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Hollmann, H.</bib:author>
+        <bib:title>Split Radix FFT Algorithm</bib:title>
+        <bib:journal>Electronic Letters</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>14–16</bib:pages>
+        <bib:month>January 5</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid82">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Piron, B. and Etcheto, J. M.</bib:author>
+        <bib:title>On Computing the Inverse DFT</bib:title>
+        <bib:journal>IEEE Transactions on ASSP</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>36</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>285–286</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid29">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P.</bib:author>
+        <bib:title>Implementation of `Split-Radix' FFT Algorithms for Complex, Real, and Real-Symmetric Data</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number/>
+        <bib:pages>285–295</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note>A shorter version appeared in the ICASSP-85 Proceedings, p. 20.6, March 1985</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid74">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Vetterli, M.</bib:author>
+        <bib:title>Improved Fourier and Hartley Transfrom Algorithms, Application to Cyclic Convolution of Real Data</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>818–824</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid21">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Vetterli, M.</bib:author>
+        <bib:title>Fast Fourier Transforms: A Tutorial Review and a State of the Art</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>259–299</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid47">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Evans, D. M. W.</bib:author>
+        <bib:title>A Second Improved Digit–Reversal Permutation Algorithm for Fast Transforms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>37</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>1288–1291</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid85">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Ferguson, Jr., W. E.</bib:author>
+        <bib:title>A Simple Derivation of Glassman General-N Fast Fourier Transform</bib:title>
+        <bib:journal>Comput. and Math. with Appls.</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>8</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>401–411</bib:pages>
+        <bib:month/>
+        <bib:note>Also, in Report AD-A083811, NTIS, Dec. 1979</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid97">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>The Design and Implementtion of FFTW</bib:title>
+        <bib:journal>Proceedings of the IEEE</bib:journal>
+        <bib:year>2005</bib:year>
+<!--optional fields-->
+        <bib:volume>93</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>216–231</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>FFTW: An Adaptive Software Architecture for the FFT</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>III</bib:volume>
+        <bib:series/>
+        <bib:pages>1381–1384</bib:pages>
+        <bib:address>ICASSP-98, Seattle</bib:address>
+        <bib:month>May 12–15</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Frigo, Matteo</bib:author>
+        <bib:title>A Fast Fourier Transform Compiler</bib:title>
+        <bib:booktitle>Proceedings of the 1999 ACM SIGPLAN Conference on Programming Language Design and Implentation</bib:booktitle>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages/>
+        <bib:address>PLDI-99, Atlanta</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid114">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, Haitao and Burrus, C. Sidney</bib:author>
+        <bib:title>Approximate FFT via the Discrete Wavelet Transform</bib:title>
+        <bib:booktitle>Proceedings of SPIE Conference 2825</bib:booktitle>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages/>
+        <bib:address>Denver</bib:address>
+        <bib:month>August 6–9</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid115">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, Haitao and Burrus, C. Sidney</bib:author>
+        <bib:title>Wavelet Transform Based Fast Approximate Fourier Transform</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>III:1973–1976</bib:pages>
+        <bib:address>IEEE ICASSP-97, Munich</bib:address>
+        <bib:month>April 21–24</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid113">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Granata, John and Conner, Michael and Tolimieri, Richard</bib:author>
+        <bib:title>Recursive Fast Algorithms and the Role of the Tensor Product</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>40</bib:volume>
+        <bib:number>12</bib:number>
+        <bib:pages>2921–2930</bib:pages>
+        <bib:month>December</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid112">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Granata, John and Conner, Michael and Tolimieri, Richard</bib:author>
+        <bib:title>The Tensor Product: A Mathematical Programming Language for FFTs</bib:title>
+        <bib:journal>IEEE Signal Processing Magazine</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>9</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>40–48</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid84">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Glassman, J. A.</bib:author>
+        <bib:title>A Generalization of the Fast Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Computers</bib:journal>
+        <bib:year>1970</bib:year>
+<!--optional fields-->
+        <bib:volume>C-19</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>105–116</bib:pages>
+        <bib:month>Feburary</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid88">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Discrete Fourier Transform</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>III:445–448</bib:pages>
+        <bib:address>IEEE ICASSP-94, Adelaide, Australia</bib:address>
+        <bib:month>April 19–22</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid89">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Fourier Transform: an FFT based on Symmetries</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:volume>46</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>335–341</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid39">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>On the Number of Multiplications Necessary to Compute a Length-<!--Math is not currently allowed within BibTeXML.--> DFT</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>91–95</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Heideman, M. T.</bib:author>
+        <bib:title>Multiplicative Complexity, Convolution, and the DFT</bib:title>
+        <bib:publisher>Springer–Verlag</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid118">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Hossen, A. N. and Heute, U. and Shentov, O. V. and Mitra, S. K.</bib:author>
+        <bib:title>Subband DFT – Part II: Accuracy, Complexity, and Applications</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number/>
+        <bib:pages>279–295</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, D. H. and Burrus, C. S.</bib:author>
+        <bib:title>Gauss and the History of the FFT</bib:title>
+        <bib:journal>IEEE Acoustics, Speech, and Signal Processing Magazine</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>1</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>14–21</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note>also in Archive for History of Exact Sciences, 1985</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid95">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Hocking, W. K.</bib:author>
+        <bib:title>Performing Fourier Transforms on Extremely Long Data Streams</bib:title>
+        <bib:journal>Computers in Physics</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>3</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>59–65</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid64">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>Large DFT Modules: N = 11, 13, 17, 19, and 25</bib:title>
+        <bib:institution>Department of Electrical Engineering, Rice University, Houston, TX 77251–1892</bib:institution>
+        <bib:year>1981</bib:year>
+<!--optional fields-->
+        <bib:type>Technical report</bib:type>
+        <bib:number>8105</bib:number>
+        <bib:address/>
+        <bib:month/>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid62">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>The Design of Optimal DFT Algorithms Using Dynamic Programming</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1983</bib:year>
+<!--optional fields-->
+        <bib:volume>31</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>378–387</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid42">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>An In-Place, In-Order Radix-2 FFT</bib:title>
+        <bib:booktitle>ICASSP-84 Proceedings</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.2</bib:pages>
+        <bib:address/>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid63">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Howard W. and Burrus, C. S.</bib:author>
+        <bib:title>On the Structure of Efficient DFT Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>33</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>248–254</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid38">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, Steven G. and Frigo, Matteo</bib:author>
+        <bib:title>A Modified Split-Radix FFT with Fewer Arithmetic Operations</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume>55</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>111–119</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid109">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Johnson, J. and Johnson, R. W. and Rodriguez, D. and Tolimieri, R.</bib:author>
+        <bib:title>A Methodology for Designing, Modifying, and Implementing Fourier Transform Algorithms on Various Architectures</bib:title>
+        <bib:journal>Circuits, Systems and Signal Processing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>9</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>449–500</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid46">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Jeong, Jechang and Williams, William J.</bib:author>
+        <bib:title>A Fast Recursive Bit-Reversal Algorithm</bib:title>
+        <bib:booktitle>Proceedings of the ICASSP-90</bib:booktitle>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>1511–1514</bib:pages>
+        <bib:address>Albuquerque, NM</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid56">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Kolba, D. P. and Parks, T. W.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm Using High Speed Convolution</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1977</bib:year>
+<!--optional fields-->
+        <bib:volume>25</bib:volume>
+        <bib:number/>
+        <bib:pages>281–294</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note>also in </bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid66">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Lu, Chao and Cooley, James W. and Tolimieri, Richard</bib:author>
+        <bib:title>FFT Algorithms for Prime Transform Sizes and their Implementations on VAX, IBM3090VF, and IBM RS/6000</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>638–648</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:inbook>
+<!--required fields-->
+        <bib:author>Lim, Jae S. and Oppenheim, A. V.</bib:author>
+        <bib:title>Advanced Topics in Signal Processing</bib:title>
+        <bib:chapter>4</bib:chapter>
+        <bib:pages/>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:inbook>
+    </bib:entry>
+    <bib:entry id="bid30">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Martens, J. B.</bib:author>
+        <bib:title>Recursive Cyclotomic Factorization – A New Algorithm for Calculating the Discrete Fourier Transform</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>750–762</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid53">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Morris, L. R.</bib:author>
+        <bib:title>Digital Signal Processing Software</bib:title>
+        <bib:publisher>DSPSW, Inc.</bib:publisher>
+        <bib:year>1982, 1983</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Toronto, Canada</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:book>
+<!--required fields-->
+        <bib:author>McClellan, J. H. and Rader, C. M.</bib:author>
+        <bib:title>Number Theory in Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall, Inc.</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid100">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Meyer, R. and Reng, R. and Schwarz, K.</bib:author>
+        <bib:title>Convolution Algorithms on DSP Processors</bib:title>
+        <bib:booktitle>Proceedings of the ICASSP-91</bib:booktitle>
+        <bib:year>1991</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>2193–2196</bib:pages>
+        <bib:address>Toronto, Canada</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid54">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Meyer, R. and Schwarz, K.</bib:author>
+        <bib:title>FFT Implementation on DSP-Chips</bib:title>
+        <bib:howpublished/>
+        <bib:month>Sept. 18</bib:month>
+        <bib:year>1990</bib:year>
+        <bib:note>preprint</bib:note>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid107">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Meyer, R. and Schwarz, K. and Schuessler, H. W.</bib:author>
+        <bib:title>FFT Implementation on DSP-Chips — Theory and Practice</bib:title>
+        <bib:booktitle>Proceedings of the ICASSP-90</bib:booktitle>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>1503–1506</bib:pages>
+        <bib:address>Albuquerque, NM</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Myers, Douglas G.</bib:author>
+        <bib:title>Digital Signal Processing, Efficient Convolution and Fourier Transform Techniques</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Sydney, Australia</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Nussbaumer, H. J.</bib:author>
+        <bib:title>Fast Fourier Transform and Convolution Algorithms</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1981, 1982</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Heidelberg, Germany</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid99">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Pitas, I. and Burrus, C. S.</bib:author>
+        <bib:title>Time and Error Analysis of Digital Convolution by Rectangular Transforms</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1983</bib:year>
+<!--optional fields-->
+        <bib:volume>5</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>153–162</bib:pages>
+        <bib:month>March</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid94">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Perez, F. and Takaoka, T.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm Implementation Using a Program Generation Technique</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech and Signal Processing</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number/>
+        <bib:pages>1221–1223</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid75">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Popović, Miodrag and Šević, Dragutin</bib:author>
+        <bib:title>A New Look at the comparison of the Fast Hartley and Fourier Transforms</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:volume>42</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>2178–2182</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid45">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rösel, Petr</bib:author>
+        <bib:title>Timing of Some Bit Reversal Algorithms</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>18</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>425–433</bib:pages>
+        <bib:month>December</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid80">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rader, C. M. and Brenner, N. M.</bib:author>
+        <bib:title>A New Principle for Fast Fourier Transformation</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>ASSP-24</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>264-266</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid52">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rius, J. M. and De Porrata-Dòria, R.</bib:author>
+        <bib:title>New FFT Bit-Reversal Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume>43</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>991–994</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid104">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Roche, Christian</bib:author>
+        <bib:title>A Split–Radix Partial Input/Output Fast Fourier Transform Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>40</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1273–1276</bib:pages>
+        <bib:month>May</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid48">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rodríguez, J. J.</bib:author>
+        <bib:title>An Improved FFT Digit–Reversal Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>37</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>1298–1300</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:book>
+<!--required fields-->
+        <bib:editor>Rabiner, L. R. and Rader, C. M.</bib:editor>
+        <bib:title>Digital Signal Processing, selected reprints</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1972</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid86">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rabiner, L.R. and Schafer, R.W. and Rader, C.M.</bib:author>
+        <bib:title>The Chirp Z-Transform Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Audio Electroacoustics</bib:journal>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume>AU-17</bib:volume>
+        <bib:number/>
+        <bib:pages>86–92</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid72">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Rao, K. R. and Yip, P.</bib:author>
+        <bib:title>Discrete Cosine Transform: Algorithms, Advantages, Applications</bib:title>
+        <bib:publisher>Academic Press</bib:publisher>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid36">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Saidi, Ali</bib:author>
+        <bib:title>Decimation-in-Time-Frequency FFT Algorithm</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>III:453–456</bib:pages>
+        <bib:address>IEEE ICASSP-94, Adelaide, Australia</bib:address>
+        <bib:month>April 19–22</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid37">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Saidi, Ali</bib:author>
+        <bib:title>Decimation-in-Time-Frequency FFT Algorithm</bib:title>
+        <bib:howpublished/>
+        <bib:month/>
+        <bib:year>1996</bib:year>
+        <bib:note>manuscript</bib:note>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid51">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sundararajan, D. and Ahamad, M. O. and Swamy, M. N. S.</bib:author>
+        <bib:title>A Fast FFT Bit-Reversal Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Circuits and Systems, II</bib:journal>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number>10</bib:number>
+        <bib:pages>701–703</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid77">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sundararajan, D. and Ahmad, M. O. and Swamy, M. N. S.</bib:author>
+        <bib:title>Fast Computations of the Discrete Fourier Transform of Real Data</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume>45</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>2010–2022</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid102">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Burrus, C. S.</bib:author>
+        <bib:title>Efficient Computation of the Short-Time FFT</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>1894-1897</bib:pages>
+        <bib:address>New York</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid90">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Selesnick, I. W. and Burrus, C. S.</bib:author>
+        <bib:title>Automating the Design of Prime Length FFT Programs</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Symposium on Circuits and Systems</bib:booktitle>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>1</bib:volume>
+        <bib:series/>
+        <bib:pages>133–136</bib:pages>
+        <bib:address>ISCAS-92, San Diego, CA</bib:address>
+        <bib:month>May</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid105">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Burrus, C. S.</bib:author>
+        <bib:title>Efficient Computation of the DFT with Only a Subset of Input or Output Points</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>1184–1200</bib:pages>
+        <bib:month>March</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:incollection>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Burrus, C. S.</bib:author>
+        <bib:title>Fast DFT and Convolution Algorithms</bib:title>
+        <bib:booktitle>Handbook for Digital Signal Processing</bib:booktitle>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:editor>Mitra, Sanjit K. and Kaiser, James F.</bib:editor>
+        <bib:number/>
+        <bib:series/>
+        <bib:type/>
+        <bib:chapter>8</bib:chapter>
+        <bib:pages/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:incollection>
+    </bib:entry>
+    <bib:entry id="bid91">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Selesnick, I. W. and Burrus, C. S.</bib:author>
+        <bib:title>Multidimensional Mapping Techniques for Convolution</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Signal Processing</bib:booktitle>
+        <bib:year>1993</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>III</bib:volume>
+        <bib:series/>
+        <bib:pages>III-288–291</bib:pages>
+        <bib:address>IEEE ICASSP-93, Minneapolis</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid92">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Selesnick, I. W. and Burrus, C. S.</bib:author>
+        <bib:title>Extending Winograd's Small Convolution Algorithm to Longer Lengths</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Symposium on Circuits and Systems</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>2</bib:volume>
+        <bib:series/>
+        <bib:pages>2.449–452</bib:pages>
+        <bib:address>IEEE ISCAS-94, London</bib:address>
+        <bib:month>June 30</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid93">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Selesnick, Ivan W. and Burrus, C. Sidney</bib:author>
+        <bib:title>Automatic Generation of Prime Length FFT Programs</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:volume>44</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>14–24</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Sorensen, Henrik V. and Burrus, C. Sidney and Heideman, Michael T.</bib:author>
+        <bib:title>Fast Fourier Transform Database</bib:title>
+        <bib:publisher>PWS Publishing</bib:publisher>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Boston</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid103">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Burrus, C. S. and Jones, D. L.</bib:author>
+        <bib:title>A New Efficient Algorithm for Computing a Few DFT Points</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Symposium on Circuits and Systems</bib:booktitle>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>1915–1918</bib:pages>
+        <bib:address>Espoo, Finland</bib:address>
+        <bib:month>June</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid35">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>On Computing the Split–Radix FFT</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>152–156</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid83">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Singleton, R.C.</bib:author>
+        <bib:title>An Algorithm for Computing the Mixed Radix Fast Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Audio and Electroacoustics</bib:journal>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume>AU-17</bib:volume>
+        <bib:number/>
+        <bib:pages>93-103</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid87">
+      <bib:misc>
+<!--required fields-->
+<!--optional fields-->
+        <bib:author>Sitton, G. A.</bib:author>
+        <bib:title>The QFT Algorithm</bib:title>
+        <bib:howpublished/>
+        <bib:month/>
+        <bib:year>1985</bib:year>
+        <bib:note/>
+      </bib:misc>
+    </bib:entry>
+    <bib:entry id="bid69">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Burrus, C. S. and Heideman, M. T.</bib:author>
+        <bib:title>On Computing the Discrete Hartley Transform</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>33</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1231–1238</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid73">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>Real Valued Fast Fourier Transform Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>849–863</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid108">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Katz, C. A. and Burrus, C. S.</bib:author>
+        <bib:title>Efficient FFT Algorithms for DSP Processors Using Tensor Product Decomposition</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>1507–1510</bib:pages>
+        <bib:address>Albuquerque, NM</bib:address>
+        <bib:month>April</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid117">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Shentov, O. V. and Mitra, S. K. and Heute, U. and Hossen, A. N.</bib:author>
+        <bib:title>Subband DFT – Part I: Definition, Interpretation and Extensions</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume>41</bib:volume>
+        <bib:number/>
+        <bib:pages>261–278</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Smith, Winthrop W. and Smith, Joanne M.</bib:author>
+        <bib:title>Handbook of Real-Time Fast Fourier Transforms</bib:title>
+        <bib:publisher>IEEE Press</bib:publisher>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid61">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Stasiński, R.</bib:author>
+        <bib:title>Prime Factor DFT Algorithms for New Small-N DFT Modules</bib:title>
+        <bib:journal>IEE Proceedings, Part G</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>134</bib:volume>
+        <bib:number>3</bib:number>
+        <bib:pages>117–126</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid96">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Stasiński, R.</bib:author>
+        <bib:title>Extending Sizes of Effective Convolution Algorithms</bib:title>
+        <bib:journal>Electronics Letters</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>26</bib:volume>
+        <bib:number>19</bib:number>
+        <bib:pages>1602–1604</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid34">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Stasiński, Ryszard</bib:author>
+        <bib:title>The Techniques of the Generalized Fast Fourier Transform Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1991</bib:year>
+<!--optional fields-->
+        <bib:volume>39</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1058–1069</bib:pages>
+        <bib:month>May</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid79">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Storn, R.</bib:author>
+        <bib:title>On the Bruun Algorithm and its Inverse</bib:title>
+        <bib:journal>Frequenz</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>46</bib:volume>
+        <bib:number/>
+        <bib:pages>110–116</bib:pages>
+        <bib:month/>
+        <bib:note>a German journal</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Tolimieri, Richard and An, Myoung and Lu, Chao</bib:author>
+        <bib:title>Algorithms for Discrete Fourier Transform and Convolution</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1989, 1997</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition>second</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid111">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Tolimieri, Richard and An, Myoung and Lu, Chao</bib:author>
+        <bib:title>Mathematics of Multidimensional Fourier Transform Algorithms</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1993, 1997</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition>second</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid65">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, Clive</bib:author>
+        <bib:title>A New Set of Minimum-Add Small-N Rotated DFT Modules</bib:title>
+        <bib:journal>Journal of Computational Physics</bib:journal>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume>75</bib:volume>
+        <bib:number/>
+        <bib:pages>190–198</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid58">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, Clive</bib:author>
+        <bib:title>A Self-Sorting In-Place Prime Factor Real/Half-Complex FFT Algorithm</bib:title>
+        <bib:journal>Journal of Computational Physics</bib:journal>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume>75</bib:volume>
+        <bib:number/>
+        <bib:pages>199–216</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid59">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, Clive</bib:author>
+        <bib:title>Nesting Strategies for Prime Factor FFT Algorithms</bib:title>
+        <bib:journal>Journal of Computational Physics</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>82</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>247–268</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid43">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, Clive</bib:author>
+        <bib:title>Self-Sorting In-Place Fast Fourier Transforms</bib:title>
+        <bib:journal>SIAM Journal of Sci. Statist. Comput.</bib:journal>
+        <bib:year>1991</bib:year>
+<!--optional fields-->
+        <bib:volume>12</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>808–823</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid60">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Temperton, Clive</bib:author>
+        <bib:title>A Generalized Prime Factor FFT Algorithm for any <!--Math is not currently allowed within BibTeXML.--></bib:title>
+        <bib:journal>SIAM Journal of Scientific and Statistical Computing</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>13</bib:volume>
+        <bib:number/>
+        <bib:pages>676–686</bib:pages>
+        <bib:month>May</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid76">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Uniyal, P. R.</bib:author>
+        <bib:title>Transforming Real-Valued Sequences: Fast Fourier versus Fast Hartley Transform Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:volume>42</bib:volume>
+        <bib:number>11</bib:number>
+        <bib:pages>3249–3254</bib:pages>
+        <bib:month>November</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid110">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Van Loan, Charles</bib:author>
+        <bib:title>Matrix Frameworks for the Fast Fourier Transform</bib:title>
+        <bib:publisher>SIAM</bib:publisher>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Philadelphia, PA</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid33">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Vetterli, Martin and Duhamel, P.</bib:author>
+        <bib:title>Split-Radix Algorithms for Length - <!--Math is not currently allowed within BibTeXML.-->  DFT's</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>37</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>57–64</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note>Also, ICASSP-88 Proceedings, pp. 1415–1418, April 1988</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid31">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Vetterli, Martin and Nussbaumer, H. J.</bib:author>
+        <bib:title>Simple FFT and DCT Algorithms with Reduced Number of Operations</bib:title>
+        <bib:journal>Signal Processing</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>6</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>267–278</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid106">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Várkonyi-Kóczy, A. R.</bib:author>
+        <bib:title>A Recursive Fast Fourier Transformation Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Circuits and Systems, II</bib:journal>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume>42</bib:volume>
+        <bib:number>9</bib:number>
+        <bib:pages>614–616</bib:pages>
+        <bib:month>September</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid49">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Walker, J. S.</bib:author>
+        <bib:title>A New Bit Reversal Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1990</bib:year>
+<!--optional fields-->
+        <bib:volume>38</bib:volume>
+        <bib:number>8</bib:number>
+        <bib:pages>1472–1473</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid23">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Mathematics of Computation</bib:journal>
+        <bib:year>1978</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number/>
+        <bib:pages>175–199</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid24">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On the Multiplicative Complexity of the Discrete Fourier Transform</bib:title>
+        <bib:journal>Advances in Mathematics</bib:journal>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume>32</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>83–117</bib:pages>
+        <bib:month>May</bib:month>
+        <bib:note>also in </bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid25">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>Arithmetic Complexity of Computation</bib:title>
+        <bib:publisher>SIAM</bib:publisher>
+        <bib:year>1980</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series>SIAM CBMS-NSF Series, No. 33</bib:series>
+        <bib:address>Philadelphia</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid71">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Wang, Fang Ming and Yip, P.</bib:author>
+        <bib:title>Fast Prime Factor Decomposition Algorithms for a Family of Discrete Trigonometric Transforms</bib:title>
+        <bib:journal>Circuits, Systems, and Signal Processing</bib:journal>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume>8</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>401–419</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid27">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Yavne, R.</bib:author>
+        <bib:title>An Economical Method for Calculating the Discrete Fourier Transform</bib:title>
+        <bib:booktitle>Fall Joint Computer Conference, AFIPS Conference Proceedings</bib:booktitle>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>33 part 1</bib:volume>
+        <bib:series/>
+        <bib:pages>115–125</bib:pages>
+        <bib:address/>
+        <bib:month/>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid50">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Yong, Angelo A.</bib:author>
+        <bib:title>A Better FFT Bit-Reversal Algorithm without Tables</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1991</bib:year>
+<!--optional fields-->
+        <bib:volume>39</bib:volume>
+        <bib:number>10</bib:number>
+        <bib:pages>2365–2367</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

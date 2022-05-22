@@ -1,0 +1,297 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Preface: Fast Fourier Transforms</title>
+  <metadata xmlns:md="http://cnx.rice.edu/mdml">
+  <md:content-id>m16324</md:content-id>
+  <md:title>Preface: Fast Fourier Transforms</md:title>
+  <md:abstract/>
+  <md:uuid>fb55ec78-f907-4422-aa37-0d6b501b03b6</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">This book focuses on the discrete Fourier transform
+(DFT), discrete convolution, and, particularly, the fast algorithms
+to calculate them. These topics have been at the center of digital
+signal processing since its beginning, and new results in hardware,
+theory and applications continue to keep them important and
+exciting.</para>
+    <para id="id2255547">As far as we can tell, Gauss was the first to propose the
+techniques that we now call the fast Fourier transform (FFT) for
+calculating the coefficients in a trigonometric expansion of an
+asteroid's orbit in 1805 <link target-id="bid0"/>. However, it was the seminal
+paper by Cooley and Tukey <link target-id="bid1"/> in 1965 that caught the
+attention of the science and engineering community and, in a way,
+founded the discipline of digital signal processing (DSP).</para>
+    <para id="id2255572">The impact of the Cooley-Tukey FFT was enormous. Problems could
+be solved quickly that were not even considered a few years earlier.
+A flurry of research expanded the theory and developed excellent
+practical programs as well as opening new applications
+<link target-id="bid2"/>. In 1976, Winograd published a short paper <link target-id="bid3"/> that set a second flurry of research in motion <link target-id="bid4"/>. This was another type of algorithm that expanded the data lengths that could be transformed efficiently and reduced the number of multiplications required. The ground work for this algorithm had be set earlier by Good <link target-id="bid5"/> and by Rader <link target-id="bid6"/>. In 1997 Frigo and Johnson developed a program they called the FFTW (fastest Fourier transform in the west) <link target-id="bid7"/>, <link target-id="bid8"/> which is a composite of many of ideas in other algorithms as well as new results to give a robust, very fast system for general data lengths on a variety of computer and DSP architectures. This work won the 1999 Wilkinson Prize for Numerical Software.</para>
+    <para id="id2255627">It is hard to overemphasis the importance of the DFT,
+convolution, and fast algorithms. With a history that goes
+back to Gauss <link target-id="bid0"/> and a compilation of references
+on these topics that in 1995 resulted in over 2400
+entries <link target-id="bid9"/>, the FFT may be the most important numerical
+algorithm in science, engineering, and applied mathematics.
+New theoretical results still are appearing,
+advances in computers and hardware continually restate the basic
+questions, and new applications open new areas for research. It is
+hoped that this book will provide the background, references,
+programs and incentive to encourage further research and results in
+this area as well as provide tools for practical applications.</para>
+    <para id="id2255653">Studying the FFT is not only valuable in understanding a powerful
+tool, it is also a prototype or example of how algorithms can be made
+efficient and how a theory can be developed to define optimality. The
+history of this development also gives insight into the process of research where timing and serendipity play interesting roles.</para>
+    <para id="id2255662">Much of the material contained in this book has been collected over 40 years
+of teaching and research in DSP, therefore, it is difficult to
+attribute just where it all came from. Some comes from my earlier
+FFT book <link target-id="bid10"/> which was sponsored by Texas Instruments and some from the FFT chapter in <link target-id="bid11"/>.
+Certainly the interaction with people like Jim Cooley and Charlie
+Rader was central but the work with graduate students and
+undergraduates was probably the most formative. I would
+particularly like to acknowledge Ramesh Agarwal, Howard Johnson,
+Mike Heideman, Henrik Sorensen, Doug Jones, Ivan Selesnick,
+Haitao Guo, and Gary Sitton. Interaction with my colleagues, Tom Parks, Hans
+Schuessler, Al Oppenheim, and Sanjit Mitra has been essential over
+many years. Support has come from the NSF, Texas Instruments, and
+the wonderful teaching and research environment at Rice University
+and in the IEEE Signal Processing Society.</para><para id="id2255701">Several chapters or sections are written by authors who have extensive experience and depth working on the particular topics. Ivan Selesnick had written several
+papers on the design of short FFTs to be used in the prime factor
+algorithm (PFA) FFT and on automatic design of these short FFTs.
+Markus Püschel has developed a theoretical framework for “Algebraic Signal
+Processing" which allows a structured
+generation of FFT programs and a system called “Spiral" for automatically
+generating algorithms specifically for an architicture. Steven
+Johnson along with his colleague Matteo Frigo created, developed, and now maintains
+the powerful FFTW system: the Fastest Fourier Transform in the West.  I sincerely thank these authors for their significant contributions.</para>
+    <para id="id2255724">I would also like to thank Prentice Hall, Inc. who returned the copyright
+on <link document="m16328">The DFT as Convolution or Filtering</link> of <emphasis>Advanced Topics in Signal Processing </emphasis><link target-id="bid12"/> around which some of this book is built.  The content of this book is in the Connexions (http://cnx.org/content/col10550/)
+repository and, therefore, is available for on-line use, <emphasis>pdf</emphasis> down loading, or purchase as a printed, bound physical book.  I certainly want to thank Daniel Williamson, Amy Kavalewitz, and the staff of Connexions for their invaluable help.  Additional FFT material can be found in Connexions, particularly content by Doug Jones <link target-id="bid13"/>, Ivan Selesnick <link target-id="bid13"/>, and Howard Johnson, <link target-id="bid13"/>. Note that this book and all the content in Connexions are copyrighted under the Creative Commons Attribution license
+(http://creativecommons.org/).</para>
+    <para id="element-451">If readers find errors in any of the modules of this collection or have suggestions for improvements or additions, please email the author of the collection or module.</para><code id="id10431344" display="block"/><para id="id2255752">C. Sidney Burrus</para>
+    <para id="id2255759">Houston, Texas</para>
+    <para id="id2255765">October 20, 2008</para>
+  </content>
+  <bib:file>
+    <bib:entry id="bid10">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:incollection>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>Efficient Fourier Transform and Convolution Algorithms</bib:title>
+        <bib:booktitle>Advanced Topics in Signal Processing</bib:booktitle>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:editor>Lim, J. S. and Oppenheim, A. V.</bib:editor>
+        <bib:number/>
+        <bib:series/>
+        <bib:type/>
+        <bib:chapter>4</bib:chapter>
+        <bib:pages>199–245</bib:pages>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:incollection>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, James W. and Lewis, Peter A. W. and Welch, Peter D.</bib:author>
+        <bib:title>Historical Notes on the Fast Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Audio and Electroacoustics</bib:journal>
+        <bib:year>1967</bib:year>
+<!--optional fields-->
+        <bib:volume>15</bib:volume>
+        <bib:number/>
+        <bib:pages>260–262</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W.</bib:author>
+        <bib:title>How the FFT Gained Acceptance</bib:title>
+        <bib:journal>IEEE Signal Processing Magazine</bib:journal>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:volume>9</bib:volume>
+        <bib:number>1</bib:number>
+        <bib:pages>10–13</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note>Also presented at the ACM Conference on the History of Scientific and Numerical Computation, Princeton, NJ, May 1987 and published in: A History of Scientific Computing, edited by S. G. Nash, Addison-Wesley, 1990, pp. 133-140.</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Cooley, J. W. and Tukey, J. W.</bib:author>
+        <bib:title>An Algorithm for the Machine Calculation of Complex Fourier Series</bib:title>
+        <bib:journal>Math. Computat.</bib:journal>
+        <bib:year>1965</bib:year>
+<!--optional fields-->
+        <bib:volume>19</bib:volume>
+        <bib:number/>
+        <bib:pages>297–301</bib:pages>
+        <bib:month/>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>The Design and Implementtion of FFTW</bib:title>
+        <bib:journal>Proceedings of the IEEE</bib:journal>
+        <bib:year>2005</bib:year>
+<!--optional fields-->
+        <bib:volume>93</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>216–231</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Frigo, Matteo and Johnson, Steven G.</bib:author>
+        <bib:title>The Fastest Fourier Transform in the West</bib:title>
+        <bib:institution>Laboratory for Computer Science</bib:institution>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:type>Technical report</bib:type>
+        <bib:number>MIT-LCS-TR-728</bib:number>
+        <bib:address>MIT, Cambridge, MA</bib:address>
+        <bib:month>September</bib:month>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Good, I. J.</bib:author>
+        <bib:title>Interaction Algorithm and Practical Fourier Analysis</bib:title>
+        <bib:journal>J. Royal Statist. Soc., B</bib:journal>
+        <bib:year>1958</bib:year>
+<!--optional fields-->
+        <bib:volume>20</bib:volume>
+        <bib:number/>
+        <bib:pages>361–372</bib:pages>
+        <bib:month/>
+        <bib:note>Addendum: vol. 22, 1960, pp 372–375</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, D. H. and Burrus, C. S.</bib:author>
+        <bib:title>Gauss and the History of the FFT</bib:title>
+        <bib:journal>IEEE Acoustics, Speech, and Signal Processing Magazine</bib:journal>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:volume>1</bib:volume>
+        <bib:number>4</bib:number>
+        <bib:pages>14–21</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note>also in Archive for History of Exact Sciences, 1985</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Jones, Douglas L.</bib:author>
+        <bib:title>The DFT, FFT, and Practical Spectral Analysis</bib:title>
+        <bib:publisher>Connexions</bib:publisher>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month>February</bib:month>
+        <bib:note>http://cnx.org/content/col10281/1.2/</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Lim, J. S. and Oppenheim, A. V.</bib:author>
+        <bib:title>Advanced Topics in Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rader, C. M.</bib:author>
+        <bib:title>Discrete Fourier Transforms When the Number of Data Samples is Prime</bib:title>
+        <bib:journal>Proceedings of the IEEE</bib:journal>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:volume>56</bib:volume>
+        <bib:number/>
+        <bib:pages>1107–1108</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Sorensen, Henrik V. and Burrus, C. Sidney and Heideman, Michael T.</bib:author>
+        <bib:title>Fast Fourier Transform Database</bib:title>
+        <bib:publisher>PWS Publishing</bib:publisher>
+        <bib:year>1995</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Boston</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Proc. National Academy of Sciences, USA</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>73</bib:volume>
+        <bib:number/>
+        <bib:pages>1006–1006</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

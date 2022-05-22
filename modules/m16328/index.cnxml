@@ -1,0 +1,2679 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>The DFT as Convolution or Filtering</title>
+  <metadata>
+  <md:content-id>m16328</md:content-id><md:title>The DFT as Convolution or Filtering</md:title>
+  <md:abstract/>
+  <md:uuid>a44a4501-dec9-439e-aece-c87cbe25c990</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">A major application of the FFT is fast convolution or fast filtering
+where the DFT of the signal is multiplied term-by-term by the DFT of
+the impulse (helps to be doing finite impulse response (FIR) filtering)
+and the time-domain output is obtained by taking the inverse DFT of
+that product. What is less well-known is the DFT can be calculated
+by convolution. There are several different approaches to this,
+each with different application.</para>
+    <section id="uid1">
+      <title>Rader's Conversion of the DFT into Convolution</title>
+      <para id="id2255560">In this section a method quite different from the index
+mapping or polynomial evaluation is developed. Rather than dealing
+with the DFT directly, it is converted into a cyclic convolution
+which must then be carried out by some efficient means. Those means
+will be covered later, but here the conversion will be explained.
+This method requires use of some number theory, which can be
+found in an accessible form in <link target-id="bid1"/> or <link target-id="bid2"/> and is easy
+enough to verify on one's own. A good general reference on number
+theory is <link target-id="bid3"/>.</para>
+      <para id="id2255593">The DFT and cyclic convolution are defined by</para>
+      <equation id="uid2"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mi>k</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <equation id="uid3"><m:math mode="display">
+          <m:mrow>
+            <m:mi>y</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:mi>h</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>-</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2255744">For both, the indices are evaluated modulo <m:math><m:mi>N</m:mi></m:math>. In order to convert
+the DFT in <link target-id="uid2"/> into the cyclic convolution of
+<link target-id="uid3"/>, the <m:math><m:mrow><m:mi>n</m:mi><m:mi>k</m:mi></m:mrow></m:math> product must be changed to the <m:math><m:mrow><m:mi>k</m:mi><m:mo>-</m:mo><m:mi>n</m:mi></m:mrow></m:math>
+difference. With real numbers, this can be done with logarithms,
+but it is more complicated when working in a finite set of integers
+modulo <m:math><m:mi>N</m:mi></m:math>. From number theory <link target-id="bid0"/>, <link target-id="bid1"/>, <link target-id="bid2"/>, <link target-id="bid3"/>, it can
+be shown that if the modulus is a prime number, a base (called a
+primitive root) exists such that a form of integer logarithm can be
+defined. This is stated in the following way. If <m:math><m:mi>N</m:mi></m:math> is a prime
+number, a number <m:math><m:mi>r</m:mi></m:math> called a primitive roots exists such that the
+integer equation</para>
+      <equation id="uid4">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mo>=</m:mo>
+            <m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:msup>
+                    <m:mi>r</m:mi>
+                    <m:mi>m</m:mi>
+                  </m:msup>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mi>N</m:mi>
+            </m:msub>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2254901">creates a unique, one-to-one map of
+the <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math> member set <m:math><m:mrow><m:mi>m</m:mi><m:mo>=</m:mo><m:mo>{</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mo>.</m:mo><m:mo>.</m:mo><m:mo>.</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>2</m:mn><m:mo>}</m:mo></m:mrow></m:math> and the <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:math> member
+set <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mo>{</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mo>.</m:mo><m:mo>.</m:mo><m:mo>.</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>}</m:mo></m:mrow></m:math>. This is because the multiplicative group
+of integers modulo a prime, <m:math><m:mi>p</m:mi></m:math>, is isomorphic to the additive group
+of integers modulo <m:math><m:mrow><m:mo>(</m:mo><m:mi>p</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math> and is illustrated for <m:math><m:mrow><m:mi>N</m:mi><m:mo>=</m:mo><m:mn>5</m:mn></m:mrow></m:math> below.</para>
+      <table id="uid5" summary="table of integers to a power modulo 5">
+<tgroup cols="10"><tbody>
+            <row>
+              <entry>r</entry>
+              <entry>m=</entry>
+              <entry>0</entry>
+              <entry>1</entry>
+              <entry>2</entry>
+              <entry>3</entry>
+              <entry>4</entry>
+              <entry>5</entry>
+              <entry>6</entry>
+              <entry>7</entry>
+            </row>
+            <row>
+              <entry>1</entry>
+              <entry/>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+            </row>
+            <row>
+              <entry>2</entry>
+              <entry/>
+              <entry>1</entry>
+              <entry>2</entry>
+              <entry>4</entry>
+              <entry>3</entry>
+              <entry>1</entry>
+              <entry>2</entry>
+              <entry>4</entry>
+              <entry>3</entry>
+            </row>
+            <row>
+              <entry>3</entry>
+              <entry/>
+              <entry>1</entry>
+              <entry>3</entry>
+              <entry>4</entry>
+              <entry>2</entry>
+              <entry>1</entry>
+              <entry>3</entry>
+              <entry>4</entry>
+              <entry>2</entry>
+            </row>
+            <row>
+              <entry>4</entry>
+              <entry/>
+              <entry>1</entry>
+              <entry>4</entry>
+              <entry>1</entry>
+              <entry>4</entry>
+              <entry>1</entry>
+              <entry>4</entry>
+              <entry>1</entry>
+              <entry>4</entry>
+            </row>
+            <row>
+              <entry>5</entry>
+              <entry/>
+              <entry>*</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>*</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+              <entry>0</entry>
+            </row>
+            <row>
+              <entry>6</entry>
+              <entry/>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+              <entry>1</entry>
+            </row>
+          </tbody>
+        
+</tgroup><caption>Table of Integers <m:math><m:mrow><m:mi>n</m:mi><m:mo>=</m:mo><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mi>r</m:mi><m:mi>m</m:mi></m:msup><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow></m:math> modulo 5, [* not defined]</caption>
+</table>
+      <para id="id2256680"><link target-id="uid5"/> is an array of values of <m:math><m:msup><m:mi>r</m:mi><m:mi>m</m:mi></m:msup></m:math> modulo <m:math><m:mi>N</m:mi></m:math> and it is
+easy to see that there are two primitive
+roots, 2 and 3, and <link target-id="uid4"/> defines a permutation of
+the integers <m:math><m:mi>n</m:mi></m:math> from the integers <m:math><m:mi>m</m:mi></m:math> (except for zero). 
+<link target-id="uid4"/> and a primitive root (usually chosen to be the smallest
+of those that exist) can be used to convert the DFT in <link target-id="uid2"/>
+to the convolution in <link target-id="uid3"/>. Since <link target-id="uid4"/> cannot give a
+zero, a new length-(N-1) data sequence is defined from <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> by
+removing the term with index zero. Let</para>
+      <equation id="id2256771">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>r</m:mi>
+              <m:mrow>
+                <m:mo>-</m:mo>
+                <m:mi>m</m:mi>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256796">and</para>
+      <equation id="id2256802">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>k</m:mi>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>r</m:mi>
+              <m:mi>s</m:mi>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256823">where the term with the negative exponent (the inverse) is
+defined as the integer that satisfies</para>
+      <equation id="id2256830">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msub>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:msup>
+                    <m:mi>r</m:mi>
+                    <m:mrow>
+                      <m:mo>-</m:mo>
+                      <m:mi>m</m:mi>
+                    </m:mrow>
+                  </m:msup>
+                  <m:msup>
+                    <m:mi>r</m:mi>
+                    <m:mi>m</m:mi>
+                  </m:msup>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mi>N</m:mi>
+            </m:msub>
+            <m:mo>=</m:mo>
+            <m:mn>1</m:mn>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2256881">If <m:math><m:mi>N</m:mi></m:math> is a prime number, <m:math><m:msup><m:mi>r</m:mi><m:mrow><m:mo>-</m:mo><m:mi>m</m:mi></m:mrow></m:msup></m:math> always exists. For
+example, <m:math><m:mrow><m:msub><m:mrow><m:mo>(</m:mo><m:mrow><m:mo>(</m:mo><m:msup><m:mn>2</m:mn><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>)</m:mo></m:mrow><m:mo>)</m:mo></m:mrow><m:mn>5</m:mn></m:msub><m:mo>=</m:mo><m:mn>3</m:mn></m:mrow></m:math>. <link target-id="uid2"/> now becomes</para>
+      <equation id="uid6"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msup>
+                <m:mi>r</m:mi>
+                <m:mi>s</m:mi>
+              </m:msup>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>m</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msup>
+                <m:mi>r</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mi>m</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>r</m:mi>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mi>m</m:mi>
+                  </m:mrow>
+                </m:msup>
+                <m:msup>
+                  <m:mi>r</m:mi>
+                  <m:mi>s</m:mi>
+                </m:msup>
+              </m:mrow>
+            </m:msup>
+            <m:mo>+</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>0</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>,</m:mo>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257066">for <m:math><m:mrow><m:mi>s</m:mi><m:mo>=</m:mo><m:mn>0</m:mn><m:mo>,</m:mo><m:mn>1</m:mn><m:mo>,</m:mo><m:mo>.</m:mo><m:mo>.</m:mo><m:mo>,</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>2</m:mn></m:mrow></m:math>, and</para>
+      <equation id="id2257104"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>0</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>n</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257156">New functions are defined, which are simply a permutation in the
+order of the original functions, as</para>
+      <equation id="uid7">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msup>
+              <m:mi>x</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msup>
+                <m:mi>r</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mi>m</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>,</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>C</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:msup>
+                <m:mi>r</m:mi>
+                <m:mi>s</m:mi>
+              </m:msup>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>,</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:msup>
+                <m:mi>r</m:mi>
+                <m:mi>n</m:mi>
+              </m:msup>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257286"><link target-id="uid6"/> then becomes</para>
+      <equation id="uid8"><m:math mode="display">
+          <m:mrow>
+            <m:msup>
+              <m:mi>C</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:munderover>
+<m:mrow>
+              <m:mo>∑</m:mo>
+</m:mrow>        
+      <m:mrow>
+                <m:mi>m</m:mi>
+                <m:mo>=</m:mo>
+                <m:mn>0</m:mn>
+              </m:mrow>
+              <m:mrow>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:munderover>
+            <m:msup>
+              <m:mi>x</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>s</m:mi>
+              <m:mo>-</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:mo>+</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>0</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257399">which is cyclic convolution of length N-1 (plus <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo></m:mrow></m:math>) and is
+denoted as</para>
+      <equation id="id2257419">
+        <m:math mode="display">
+          <m:mrow>
+            <m:msup>
+              <m:mi>C</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:msup>
+              <m:mi>x</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>*</m:mo>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mo>'</m:mo>
+            </m:msup>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>+</m:mo>
+            <m:mi>x</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mn>0</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257490">Applying this change of variables (use of logarithms) to the DFT
+can best be illustrated from the matrix formulation of the DFT.
+<link target-id="uid2"/> is written for a length-5 DFT as</para>
+      <equation id="uid9">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>3</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>4</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+            <m:mo>=</m:mo>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>0</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>3</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>4</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2257741">where the square matrix should contain the terms of <m:math><m:msup><m:mi>W</m:mi><m:mrow><m:mi>n</m:mi><m:mi>k</m:mi></m:mrow></m:msup></m:math> but for
+clarity, only the exponents <m:math><m:mrow><m:mi>n</m:mi><m:mi>k</m:mi></m:mrow></m:math> are shown. Separating the <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo></m:mrow></m:math>
+term, applying the mapping of <link target-id="uid7"/>, and using the primitive
+roots <m:math><m:mrow><m:mi>r</m:mi><m:mo>=</m:mo><m:mn>2</m:mn></m:mrow></m:math> (and <m:math><m:mrow><m:msup><m:mi>r</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup><m:mo>=</m:mo><m:mn>3</m:mn></m:mrow></m:math>) gives</para>
+      <equation id="uid10">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>4</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>C</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>3</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+            <m:mo>=</m:mo>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mn>3</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>4</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>2</m:mn>
+                  </m:mtd>
+                  <m:mtd>
+                    <m:mn>1</m:mn>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>1</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>3</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>4</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+            <m:mo>+</m:mo>
+            <m:mfenced separators="" open="[" close="]">
+              <m:mtable>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+                <m:mtr>
+                  <m:mtd>
+                    <m:mrow>
+                      <m:mi>x</m:mi>
+                      <m:mo>(</m:mo>
+                      <m:mn>0</m:mn>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                  </m:mtd>
+                </m:mtr>
+              </m:mtable>
+            </m:mfenced>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258082">and</para>
+      <equation id="id2258088">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>0</m:mn>
+            <m:mo>)</m:mo>
+            <m:mo>=</m:mo>
+            <m:mi>x</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>0</m:mn>
+            <m:mo>)</m:mo>
+            <m:mo>+</m:mo>
+            <m:mi>x</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>1</m:mn>
+            <m:mo>)</m:mo>
+            <m:mo>+</m:mo>
+            <m:mi>x</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>2</m:mn>
+            <m:mo>)</m:mo>
+            <m:mo>+</m:mo>
+            <m:mi>x</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>3</m:mn>
+            <m:mo>)</m:mo>
+            <m:mo>+</m:mo>
+            <m:mi>x</m:mi>
+            <m:mo>(</m:mo>
+            <m:mn>4</m:mn>
+            <m:mo>)</m:mo>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258160">which can be seen to be a reordering of the structure in
+<link target-id="uid9"/>. This is in the form of cyclic convolution as indicated
+in <link target-id="uid8"/>. Rader first showed this in 1968 <link target-id="bid1"/>, stating
+that a prime length-N DFT could be converted into a length-(N-1)
+cyclic convolution of a permutation of the data with a permutation
+of the W's. He also stated that a slightly more complicated
+version of the same idea would work for a DFT with a length equal
+to an odd prime to a power. The details of that theory can be found
+in <link target-id="bid1"/>, <link target-id="bid4"/>.</para>
+      <para id="id2258199">Until 1976, this conversion approach received little
+attention since it seemed to offer few advantages. It has
+specialized applications in calculating the DFT if the cyclic
+convolution is done by distributed arithmetic table look-up
+<link target-id="bid5"/> or by use of number theoretic transforms
+<link target-id="bid0"/>, <link target-id="bid1"/>, <link target-id="bid2"/>. It and the Goertzel algorithm
+<link target-id="bid6"/>, <link target-id="bid7"/> are efficient when only a few DFT values need to be
+calculated. It may also have advantages when used with pipelined or
+vector hardware designed for fast inner products. One example is the
+TMS320 signal processing microprocessor which is pipelined for inner
+products. The general use of this scheme emerged when new fast
+cyclic convolution algorithms were developed by Winograd
+<link target-id="bid8"/>.</para>
+    </section>
+    <section id="uid11">
+      <title>The Chirp Z-Transform (or Bluestein's Algorithm)</title>
+      <para id="id2258260">The DFT of <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> evaluates the Z-transform of <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> on <m:math><m:mi>N</m:mi></m:math> equally
+spaced points on the unit circle in the <m:math><m:mi>z</m:mi></m:math> plane. Using a nonlinear
+change of variables, one can create a structure which is equivalent
+to modulation and filtering <m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> by a “chirp" signal.
+<link target-id="bid9"/>, <link target-id="bid10"/>, <link target-id="bid11"/>, <link target-id="bid6"/>, <link target-id="bid12"/>, <link target-id="bid7"/>.</para>
+      <para id="id2258368">The mathematical identity <m:math><m:mrow><m:msup><m:mrow><m:mo>(</m:mo><m:mi>k</m:mi><m:mo>-</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow><m:mn>2</m:mn></m:msup><m:mo>=</m:mo><m:msup><m:mi>k</m:mi><m:mn>2</m:mn></m:msup><m:mo>-</m:mo><m:mn>2</m:mn><m:mi>k</m:mi><m:mi>n</m:mi><m:mo>+</m:mo><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup></m:mrow></m:math> gives</para>
+      <equation id="uid12">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>n</m:mi>
+            <m:mi>k</m:mi>
+            <m:mo>=</m:mo>
+            <m:mo>(</m:mo>
+            <m:msup>
+              <m:mi>n</m:mi>
+              <m:mn>2</m:mn>
+            </m:msup>
+            <m:mo>-</m:mo>
+            <m:msup>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>-</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mn>2</m:mn>
+            </m:msup>
+            <m:mo>+</m:mo>
+            <m:msup>
+              <m:mi>k</m:mi>
+              <m:mn>2</m:mn>
+            </m:msup>
+            <m:mo>)</m:mo>
+            <m:mo>/</m:mo>
+            <m:mn>2</m:mn>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258488">which substituted into the definition of the DFT in <link document="m16326" target-id="uid1">Multidimensional Index Mapping: Equation 1</link> gives</para>
+      <equation id="uid13"><m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:mrow>
+              <m:mo>{</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mspace width="4pt"/>
+              <m:mrow>
+                <m:mo>[</m:mo>
+                <m:mi>x</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mspace width="4pt"/>
+                <m:msup>
+                  <m:mi>W</m:mi>
+                  <m:mrow>
+                    <m:msup>
+                      <m:mi>n</m:mi>
+                      <m:mn>2</m:mn>
+                    </m:msup>
+                    <m:mo>/</m:mo>
+                    <m:mn>2</m:mn>
+                  </m:mrow>
+                </m:msup>
+                <m:mo>]</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:msup>
+                <m:mi>W</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:msup>
+                    <m:mrow>
+                      <m:mo>(</m:mo>
+                      <m:mi>k</m:mi>
+                      <m:mo>-</m:mo>
+                      <m:mi>n</m:mi>
+                      <m:mo>)</m:mo>
+                    </m:mrow>
+                    <m:mn>2</m:mn>
+                  </m:msup>
+                  <m:mo>/</m:mo>
+                  <m:mn>2</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mo>}</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>W</m:mi>
+              <m:mrow>
+                <m:msup>
+                  <m:mi>k</m:mi>
+                  <m:mn>2</m:mn>
+                </m:msup>
+                <m:mo>/</m:mo>
+                <m:mn>2</m:mn>
+              </m:mrow>
+            </m:msup>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258642">This equation can be interpreted as first multiplying (modulating) the data
+<m:math><m:mrow><m:mi>x</m:mi><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow></m:math> by a chirp sequence (<m:math><m:msup><m:mi>W</m:mi><m:mrow><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:msup></m:math>, then convolving (filtering) it, then
+finally multiplying the filter output by the chirp sequence to give the DFT.</para>
+      <para id="id2258691">Define the chirp sequence or signal as <m:math><m:mrow><m:mi>h</m:mi><m:mrow><m:mo>(</m:mo><m:mi>n</m:mi><m:mo>)</m:mo></m:mrow><m:mo>=</m:mo><m:msup><m:mi>W</m:mi><m:mrow><m:msup><m:mi>n</m:mi><m:mn>2</m:mn></m:msup><m:mo>/</m:mo><m:mn>2</m:mn></m:mrow></m:msup></m:mrow></m:math> which is called
+a chirp because the squared exponent gives a sinusoid with changing frequency.
+Using this definition, <link target-id="uid13"/> becomes</para>
+      <equation id="uid14">
+        <m:math mode="display">
+          <m:mrow>
+            <m:mi>C</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+            <m:mo>=</m:mo>
+            <m:mo>{</m:mo>
+            <m:mrow>
+              <m:mo>[</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="4pt"/>
+              <m:mi>h</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>]</m:mo>
+            </m:mrow>
+            <m:mspace width="4pt"/>
+            <m:mo>*</m:mo>
+            <m:mspace width="4pt"/>
+            <m:msup>
+              <m:mi>h</m:mi>
+              <m:mrow>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+              </m:mrow>
+            </m:msup>
+            <m:mo>}</m:mo>
+            <m:mspace width="4pt"/>
+            <m:mi>h</m:mi>
+            <m:mrow>
+              <m:mo>(</m:mo>
+              <m:mi>n</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:mrow>
+        </m:math>
+      </equation>
+      <para id="id2258827">We know that convolution can be carried out by multiplying the DFTs of the signals,
+here we see that evaluation of the DFT can be carried out by convolution. Indeed,
+the convolution represented by <m:math><m:mo>*</m:mo></m:math> in <link target-id="uid14"/> can be carried out by DFTs (actually
+FFTs) of a larger length. This allows a prime length DFT to be calculated by a
+very efficient length-<m:math><m:msup><m:mn>2</m:mn><m:mi>M</m:mi></m:msup></m:math> FFT. This becomes practical for large <m:math><m:mi>N</m:mi></m:math> when a particular
+non-composite (or <m:math><m:mi>N</m:mi></m:math> with few factors) length is required.</para>
+      <para id="id2258884">As developed here, the chirp z-transform evaluates the z-transform at equally spaced
+points on the unit circle. A slight modification allows evaluation on a spiral and
+in segments <link target-id="bid11"/>, <link target-id="bid6"/> and allows savings with only some input values are nonzero or
+when only some output values are needed. The story of the development of this
+transform is given in <link target-id="bid12"/>.</para>
+      <para id="id2258909">Two Matlab programs to calculate an arbitrary length DFT using the chirp z-transform
+is shown in <link target-id="uid15"/>.</para>
+      <code id="uid15" display="block" class="listing">function y = chirpc(x);
+% function y = chirpc(x)
+% computes an arbitrary-length DFT with the
+% chirp z-transform algorithm.  csb.  6/12/91
+%
+N  = length(x);  n = 0:N-1;     %Sequence length
+W  = exp(-j*pi*n.*n/N);         %Chirp signal
+xw = x.*W;                      %Modulate with chirp
+WW = [conj(W(N:-1:2)),conj(W)]; %Construct filter
+y  = conv(WW,xw);               %Convolve w filter
+y  = y(N:2*N-1).*W;             %Demodulate w chirp
+ 
+ 
+function y = chirp(x);
+% function y = chirp(x)
+% computes an arbitrary-length Discrete Fourier Transform (DFT)
+% with the chirp z transform algorithm. The linear convolution
+% then required is done with FFTs.
+% 1988: L. Arevalo; 11.06.91 K. Schwarz, LNT Erlangen; 6/12/91 csb.
+%
+N   = length(x);                %Sequence length
+L   = 2^ceil(log((2*N-1))/log(2)); %FFT length
+n   = 0:N-1;
+W   = exp(-j*pi*n.*n/N);        %Chirp signal
+FW  = fft([conj(W), zeros(1,L-2*N+1), conj(W(N:-1:2))],L);
+y   = ifft(FW.*fft(x.'.*W,L));  %Convolve using FFT
+y   = y(1:N).*W;                %Demodulate
+ 
+</code>
+    </section>
+    <section id="uid16">
+      <title>Goertzel's Algorithm (or A Better <!--Math is not currently allowed in CNXML section title.--> DFT Algorithm)</title>
+      <para id="id2259240">Goertzel's algorithm <link target-id="bid13"/>, <link target-id="bid7"/>, <link target-id="bid14"/> is another methods that
+calculates the DFT by converting it into a digital filtering problem. The
+method looks at the calculation of the DFT as the evaluation of a
+polynomial on the unit circle in the complex plane. This evaluation is
+done by Horner's method which is implemented recursively by an IIR filter.</para>
+      <section id="uid17">
+        <title>The First-Order Goertzel Algorithm</title>
+        <para id="id2259275">The polynomial whose values on the unit circle are the DFT is a slightly
+modified z-transform of x(n) given by</para>
+        <equation id="uid18"><m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="0.166667em"/>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mi>n</m:mi>
+                </m:mrow>
+              </m:msup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259350">which for clarity in this development uses a positive exponent .
+This is illustrated for a length-4 sequence as a third-order
+polynomial by</para>
+        <equation id="uid19">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>3</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mn>3</m:mn>
+              </m:msup>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mn>2</m:mn>
+              </m:msup>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mi>z</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>0</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259444">The DFT is found by evaluating <link target-id="uid18"/> at <m:math><m:mrow><m:mi>z</m:mi><m:mo>=</m:mo><m:msup><m:mi>W</m:mi><m:mi>k</m:mi></m:msup></m:mrow></m:math>, which
+can be written as</para>
+        <equation id="id2259473">
+          <m:math mode="display">
+            <m:mrow>
+              <m:msub>
+                <m:mrow>
+                  <m:mi>C</m:mi>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:mi>k</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>=</m:mo>
+                  <m:mi>X</m:mi>
+                  <m:mrow>
+                    <m:mo>(</m:mo>
+                    <m:mi>z</m:mi>
+                    <m:mo>)</m:mo>
+                  </m:mrow>
+                  <m:mo>|</m:mo>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>z</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:msup>
+                    <m:mi>W</m:mi>
+                    <m:mi>k</m:mi>
+                  </m:msup>
+                </m:mrow>
+              </m:msub>
+              <m:mo>=</m:mo>
+              <m:mi>D</m:mi>
+              <m:mi>F</m:mi>
+              <m:mi>T</m:mi>
+              <m:mrow>
+                <m:mo>{</m:mo>
+                <m:mi>x</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>n</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>}</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259547">where</para>
+        <equation id="id2259553">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>W</m:mi>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>e</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mi>j</m:mi>
+                  <m:mn>2</m:mn>
+                  <m:mi>π</m:mi>
+                  <m:mo>/</m:mo>
+                  <m:mi>N</m:mi>
+                </m:mrow>
+              </m:msup>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259587">The most efficient way of evaluating a general polynomial without any
+pre-processing is by “Horner's rule" <link target-id="bid15"/> which is a nested
+evaluation. This is illustrated for the polynomial in <link target-id="uid19"/> by</para>
+        <equation id="uid20">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mfenced separators="" open="{" close="}">
+                <m:mo>[</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>(</m:mo>
+                <m:mn>3</m:mn>
+                <m:mo>)</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>(</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+                <m:mo>]</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>+</m:mo>
+                <m:mi>x</m:mi>
+                <m:mo>(</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mfenced>
+              <m:mi>z</m:mi>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>0</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259690">This nested sequence of operations can be written as a linear difference
+equation in the form of</para>
+        <equation id="uid21">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>z</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>)</m:mo>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259751">with initial condition <m:math><m:mrow><m:mi>y</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math>, and the desired result being
+the solution at <m:math><m:mrow><m:mi>m</m:mi><m:mo>=</m:mo><m:mi>N</m:mi></m:mrow></m:math>. The value of the polynomial is given by</para>
+        <equation id="uid22">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>z</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259827"><link target-id="uid21"/> can be viewed as a first-order IIR filter with the
+input being the data sequence in reverse order and the value of the
+polynomial at <m:math><m:mi>z</m:mi></m:math> being the filter output sampled at <m:math><m:mrow><m:mi>m</m:mi><m:mo>=</m:mo><m:mi>N</m:mi></m:mrow></m:math>. Applying
+this to the DFT gives the Goertzel algorithm <link target-id="bid16"/>, <link target-id="bid14"/> which is</para>
+        <equation id="uid23">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>W</m:mi>
+                <m:mi>k</m:mi>
+              </m:msup>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259935">with <m:math><m:mrow><m:mi>y</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math> and</para>
+        <equation id="uid24">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>k</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2259992">where</para>
+        <equation id="uid25"><m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:munderover>
+<m:mrow>
+                <m:mo>∑</m:mo>
+</m:mrow>        
+        <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mo>=</m:mo>
+                  <m:mn>0</m:mn>
+                </m:mrow>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:munderover>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>n</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="0.166667em"/>
+              <m:msup>
+                <m:mi>W</m:mi>
+                <m:mrow>
+                  <m:mi>n</m:mi>
+                  <m:mi>k</m:mi>
+                </m:mrow>
+              </m:msup>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260070">The flowgraph of the algorithm can be found in <link target-id="bid7"/>, <link target-id="bid14"/> and a
+simple FORTRAN program is given in the appendix.</para>
+        <para id="id2260086">When comparing this program with the direct calculation of <link target-id="uid25"/>, it
+is seen that the number of floating-point multiplications and additions
+are the same. In fact, the structures of the two algorithms look similar,
+but close examination shows that the way the sines and cosines enter the
+calculations is different. In <link target-id="uid25"/>, new sine and cosine values are
+calculated for each frequency and for each data value, while for the Goertzel algorithm in <link target-id="uid23"/>, they are calculated only for each
+frequency in the outer loop. Because of the recursive or feedback nature
+of the algorithm, the sine and cosine values are “updated" each loop
+rather than recalculated. This results in <m:math><m:mrow><m:mn>2</m:mn><m:mi>N</m:mi></m:mrow></m:math> trigonometric evaluations
+rather than <m:math><m:mrow><m:mn>2</m:mn><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:mrow></m:math>. It also results in an increase in accumulated
+quantization error.</para>
+        <para id="id2260150">It is possible to modify this algorithm to allow entering the data
+in forward order rather than reverse order. The difference 
+<link target-id="uid21"/> becomes</para>
+        <equation id="uid26">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260224">if <link target-id="uid22"/> becomes</para>
+        <equation id="uid27">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>C</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>k</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mspace width="0.166667em"/>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260284">for <m:math><m:mrow><m:mi>y</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math>. This is the algorithm programmed later.</para>
+      </section>
+      <section id="uid28">
+        <title>The Second-Order Goertzel Algorithm</title>
+        <para id="id2260321">One of the reasons the first-order Goertzel algorithm does not improve
+efficiency is that the constant in the feedback or recursive path is
+complex and, therefore, requires four real multiplications and two real
+additions. A modification of the scheme to make it second-order removes
+the complex multiplications and reduces the number of required
+multiplications by two.</para>
+        <para id="id2260330">Define the variable <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>)</m:mo></m:mrow></m:math> so that</para>
+        <equation id="uid29">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>-</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260417">This substituted into the right-hand side of <link target-id="uid21"/> gives</para>
+        <equation id="uid30">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>z</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>)</m:mo>
+              <m:mo>-</m:mo>
+              <m:mi>q</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>-</m:mo>
+              <m:mn>2</m:mn>
+              <m:mo>)</m:mo>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>-</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260502">Combining <link target-id="uid29"/> and <link target-id="uid30"/> gives the second order difference
+equation</para>
+        <equation id="uid31">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>+</m:mo>
+                <m:msup>
+                  <m:mi>z</m:mi>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mn>1</m:mn>
+                  </m:mrow>
+                </m:msup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260611">which together with the output <link target-id="uid29"/>, comprise the
+second-order Goertzel algorithm where</para>
+        <equation id="id2260622">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>z</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>N</m:mi>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260652">for initial conditions <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mi>q</m:mi><m:mo>(</m:mo><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math>.</para>
+        <para id="id2260692">A similar development starting with <link target-id="uid26"/> gives a second-order
+algorithm with forward ordered input as</para>
+        <equation id="uid32">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>+</m:mo>
+                <m:msup>
+                  <m:mi>z</m:mi>
+                  <m:mrow>
+                    <m:mo>-</m:mo>
+                    <m:mn>1</m:mn>
+                  </m:mrow>
+                </m:msup>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>-</m:mo>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>2</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>+</m:mo>
+              <m:mi>x</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>m</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <equation id="uid33">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>y</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>=</m:mo>
+              <m:mi>q</m:mi>
+              <m:mo>(</m:mo>
+              <m:mi>m</m:mi>
+              <m:mo>)</m:mo>
+              <m:mo>-</m:mo>
+              <m:mi>z</m:mi>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mo>(</m:mo>
+              <m:mo>-</m:mo>
+              <m:mn>1</m:mn>
+              <m:mo>)</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260844">with</para>
+        <equation id="uid34">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mspace width="0.166667em"/>
+              <m:mi>y</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2260899">and for <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mn>0</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mi>q</m:mi><m:mo>(</m:mo><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo><m:mo>=</m:mo><m:mn>0</m:mn></m:mrow></m:math>.</para>
+        <para id="id2260939">Note that both difference <link target-id="uid31"/> and <link target-id="uid32"/> are not changed
+if <m:math><m:mi>z</m:mi></m:math> is replaced with <m:math><m:msup><m:mi>z</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:math>, only the output <link target-id="uid29"/> and
+<link target-id="uid33"/> are different. This means that the polynomial <m:math><m:mrow><m:mi>X</m:mi><m:mo>(</m:mo><m:mi>z</m:mi><m:mo>)</m:mo></m:mrow></m:math> may be
+evaluated at a particular <m:math><m:mi>z</m:mi></m:math> and its inverse <m:math><m:msup><m:mi>z</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:math> from one solution
+of the difference <link target-id="uid31"/> or <link target-id="uid32"/> using the output
+equations</para>
+        <equation id="uid35">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>-</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mspace width="0.166667em"/>
+              <m:mi>q</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>N</m:mi>
+                <m:mo>-</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>)</m:mo>
+              </m:mrow>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261107">and</para>
+        <equation id="uid36">
+          <m:math mode="display">
+            <m:mrow>
+              <m:mi>X</m:mi>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mn>1</m:mn>
+                <m:mo>/</m:mo>
+                <m:mi>z</m:mi>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>=</m:mo>
+              <m:msup>
+                <m:mi>z</m:mi>
+                <m:mrow>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                </m:mrow>
+              </m:msup>
+              <m:mspace width="0.166667em"/>
+              <m:mrow>
+                <m:mo>(</m:mo>
+                <m:mi>q</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>N</m:mi>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>-</m:mo>
+                <m:mi>z</m:mi>
+                <m:mspace width="0.166667em"/>
+                <m:mi>q</m:mi>
+                <m:mrow>
+                  <m:mo>(</m:mo>
+                  <m:mi>N</m:mi>
+                  <m:mo>-</m:mo>
+                  <m:mn>1</m:mn>
+                  <m:mo>)</m:mo>
+                </m:mrow>
+                <m:mo>)</m:mo>
+              </m:mrow>
+              <m:mo>.</m:mo>
+            </m:mrow>
+          </m:math>
+        </equation>
+        <para id="id2261195">Clearly, this allows the DFT of a sequence to be calculated with half
+the arithmetic since the outputs are calculated two at a time. The
+second-order DE actually produces a solution <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>)</m:mo></m:mrow></m:math> that contains two
+first-order components. The output equations are, in effect, zeros that
+cancel one or the other pole of the second-order solution to give the
+desired first-order solution. In addition to allowing the calculating of
+two outputs at a time, the second-order DE requires half the number of
+real multiplications as the first-order form. This is because the
+coefficient of the <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>-</m:mo><m:mn>2</m:mn><m:mo>)</m:mo></m:mrow></m:math> is unity and the coefficient of the <m:math><m:mrow><m:mi>q</m:mi><m:mo>(</m:mo><m:mi>m</m:mi><m:mo>-</m:mo><m:mn>1</m:mn><m:mo>)</m:mo></m:mrow></m:math>
+is real if <m:math><m:mi>z</m:mi></m:math> and <m:math><m:msup><m:mi>z</m:mi><m:mrow><m:mo>-</m:mo><m:mn>1</m:mn></m:mrow></m:msup></m:math> are complex conjugates of each other which is
+true for the DFT.</para>
+      </section>
+      <section id="uid37">
+        <title>Analysis of Arithmetic Complexity and Timings</title>
+        <para id="id2261308">Analysis of the various forms of the Goertzel algorithm from their
+programs gives the following operation count for real multiplications and
+real additions assuming real data.</para>
+<!--empty paragraphs get left behind.-->
+        <table id="id2261318" summary="">
+<tgroup cols="4"><tbody>
+              <row>
+                <entry>Algorithm</entry>
+                <entry>Real Mults.</entry>
+                <entry>Real Adds</entry>
+                <entry>Trig Eval.</entry>
+              </row>
+              
+              <row>
+                <entry>Direct DFT</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>First-Order</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>-</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>Second-Order</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mn>2</m:mn>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>4</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              <row>
+                <entry>Second-Order 2</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mn>2</m:mn>
+                      <m:mspace width="0.166667em"/>
+                      <m:msup>
+                        <m:mi>N</m:mi>
+                        <m:mn>2</m:mn>
+                      </m:msup>
+                      <m:mo>+</m:mo>
+                      <m:mi>N</m:mi>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mi>N</m:mi>
+                  </m:math>
+                </entry>
+              </row>
+            </tbody>
+          
+</tgroup>
+</table>
+        <para id="id2261674"/>
+        <para id="id2261678">Timings of the algorithms on a PC in milliseconds are given in the
+following table.</para>
+<!--empty paragraphs get left behind.-->
+        <table id="id2261689" summary="">
+<tgroup cols="3"><tbody>
+              <row>
+                <entry>Algorithm</entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>N</m:mi>
+                      <m:mo>=</m:mo>
+                      <m:mn>125</m:mn>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+                <entry>
+                  <m:math>
+                    <m:mrow>
+                      <m:mi>N</m:mi>
+                      <m:mo>=</m:mo>
+                      <m:mn>257</m:mn>
+                    </m:mrow>
+                  </m:math>
+                </entry>
+              </row>
+              
+              <row>
+                <entry>Direct DFT</entry>
+                <entry>4.90</entry>
+                <entry>19.83</entry>
+              </row>
+              <row>
+                <entry>First-Order</entry>
+                <entry>4.01</entry>
+                <entry>16.70</entry>
+              </row>
+              <row>
+                <entry>Second-Order</entry>
+                <entry>2.64</entry>
+                <entry>11.04</entry>
+              </row>
+              <row>
+                <entry>Second-Order 2</entry>
+                <entry>1.32</entry>
+                <entry>5.55</entry>
+              </row>
+            </tbody>
+          
+</tgroup>
+</table>
+        <para id="id2261822">These timings track the floating point operation counts fairly well.</para>
+      </section>
+      <section id="uid38">
+        <title>Conclusions</title>
+        <para id="id2261837">Goertzel's algorithm in its first-order form is not particularly
+interesting, but the two-at-a-time second-order form is significantly
+faster than a direct DFT. It can also be used for any polynomial
+evaluation or for the DTFT at unequally spaced values or for evaluating a
+few DFT terms. A very interesting observation is that the inner-most loop
+of the Glassman-Ferguson FFT <link target-id="bid17"/> is a first-order Goertzel
+algorithm even though that FFT is developed in a very different framework.</para>
+        <para id="id2261854">In addition to floating-point arithmetic counts, the number of trigonometric
+function evaluations that must be made or the size of a table to store
+precomputed values should be considered. Since the value of the <m:math><m:msup><m:mi>W</m:mi><m:mrow><m:mi>n</m:mi><m:mi>k</m:mi></m:mrow></m:msup></m:math>
+terms in <link target-id="uid21"/> are iteratively calculate in the IIR filter structure,
+there is round-off error accumulation that should be analyzed in any
+application.</para>
+        <para id="id2261885">It may be possible to further improve the efficiency of the second-order
+Goertzel algorithm for calculating all of the DFT of a number sequence.
+Perhaps a fourth order DE could calculate four output values at a time and
+they could be separated by a numerator that would cancel three of the
+zeros. Perhaps the algorithm could be arranged in stages to give an
+<m:math><m:mrow><m:mi>N</m:mi><m:mspace width="0.166667em"/><m:mo form="prefix">log</m:mo><m:mo>(</m:mo><m:mi>N</m:mi><m:mo>)</m:mo></m:mrow></m:math> operation count. The current algorithm does not take into
+account any of the symmetries of the input index. Perhaps some of the
+ideas used in developing the QFT <link target-id="bid18"/>, <link target-id="bid19"/>, <link target-id="bid20"/> could be used here.</para>
+      </section>
+    </section>
+    <section id="uid39">
+      <title>The Quick Fourier Transform (QFT)</title>
+      <para id="id2261947">One stage of the QFT can use the symmetries of the sines and cosines to
+calculate a DFT more efficiently than directly implementing the definition
+<link document="m16326" target-id="uid1">Multidimensional Index Mapping: Equation 1</link>. Similar to the Goertzel algorithm, the one-stage QFT is a
+better <m:math><m:msup><m:mi>N</m:mi><m:mn>2</m:mn></m:msup></m:math> DFT algorithm for arbitrary lengths. See <link document="m16334" target-id="uid26">The Cooley-Tukey Fast Fourier Transform Algorithm: The Quick Fourier Transform, An FFT based on Symmetries</link>.</para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid0">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Blahut, Richard E.</bib:author>
+        <bib:title>Fast Algorithms for Digital Signal Processing</bib:title>
+        <bib:publisher>Addison-Wesley</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Reading, Mass.</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bluestein, L. I.</bib:author>
+        <bib:title>A Linear Filtering Approach to the Computation of Discrete Fourier Transform</bib:title>
+        <bib:journal>IEEE Transactions on Audio Electroacoustics</bib:journal>
+        <bib:year>1970</bib:year>
+<!--optional fields-->
+        <bib:volume>AU-18</bib:volume>
+        <bib:number/>
+        <bib:pages>451–455</bib:pages>
+        <bib:month>December</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid18">
+      <bib:techreport>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>The Quick Fourier Transform</bib:title>
+        <bib:institution>ECE Dept., Rice University</bib:institution>
+        <bib:year>1992</bib:year>
+<!--optional fields-->
+        <bib:type>Unpublished Notes</bib:type>
+        <bib:number/>
+        <bib:address/>
+        <bib:month/>
+        <bib:note/>
+      </bib:techreport>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Chu, Shuni and Burrus, C. S.</bib:author>
+        <bib:title>A Prime Factor FFT Algorithm using Distributed Arithmetic</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>30</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>217–227</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid17">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Ferguson, Jr., W. E.</bib:author>
+        <bib:title>A Simple Derivation of Glassman General-N Fast Fourier Transform</bib:title>
+        <bib:journal>Comput. and Math. with Appls.</bib:journal>
+        <bib:year>1982</bib:year>
+<!--optional fields-->
+        <bib:volume>8</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>401–411</bib:pages>
+        <bib:month/>
+        <bib:note>Also, in Report AD-A083811, NTIS, Dec. 1979</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Goertzel, G.</bib:author>
+        <bib:title>An Algorithm for the Evaluation of Finite Trigonometric Series</bib:title>
+        <bib:journal>Amer. Math. Monthly</bib:journal>
+        <bib:year>1958</bib:year>
+<!--optional fields-->
+        <bib:volume>65</bib:volume>
+        <bib:number/>
+        <bib:pages>34-35</bib:pages>
+        <bib:month>January</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid19">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Discrete Fourier Transform</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1994</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>III:445–448</bib:pages>
+        <bib:address>IEEE ICASSP-94, Adelaide, Australia</bib:address>
+        <bib:month>April 19–22</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid20">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Guo, H. and Sitton, G. A. and Burrus, C. S.</bib:author>
+        <bib:title>The Quick Fourier Transform: an FFT based on Symmetries</bib:title>
+        <bib:journal>IEEE Transactions on Signal Processing</bib:journal>
+        <bib:year>1998</bib:year>
+<!--optional fields-->
+        <bib:volume>46</bib:volume>
+        <bib:number>2</bib:number>
+        <bib:pages>335–341</bib:pages>
+        <bib:month>February</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:phdthesis>
+<!--required fields-->
+        <bib:author>Heideman, M. T.</bib:author>
+        <bib:title>Fast Algorithms for the DFT and Convolution with Constrained Inputs and Restricted Outputs</bib:title>
+        <bib:school>Rice University</bib:school>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:type>Ph. D. Thesis</bib:type>
+        <bib:address/>
+        <bib:month>May</bib:month>
+        <bib:note/>
+      </bib:phdthesis>
+    </bib:entry>
+    <bib:entry id="bid15">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Knuth, Donald E.</bib:author>
+        <bib:title>The Art of Computer Programming, Vol. 2, Seminumerical Algorithms</bib:title>
+        <bib:publisher>Addison-Wesley</bib:publisher>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Reading, MA</bib:address>
+        <bib:edition>Third</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:book>
+<!--required fields-->
+        <bib:author>McClellan, J. H. and Rader, C. M.</bib:author>
+        <bib:title>Number Theory in Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid2">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Nussbaumer, H. J.</bib:author>
+        <bib:title>Fast Fourier Transform and Convolution Algorithms</bib:title>
+        <bib:publisher>Springer-Verlag</bib:publisher>
+        <bib:year>1981, 1982</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Heidelberg, Germany</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Niven, Ivan and Zuckerman, H. S.</bib:author>
+        <bib:title>An Introduction to the Theory of Numbers</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1980</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition>Fourth</bib:edition>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid14">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1989</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note>Earlier editions in 1975 and 1989</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid16">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Parks, T. W. and Burrus, C. S.</bib:author>
+        <bib:title>Digital Filter Design</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rabiner, Lawrence</bib:author>
+        <bib:title>The chirp z-transform algorithm: a lesson in serendipity</bib:title>
+        <bib:journal>IEEE Signal Processing Magazine</bib:journal>
+        <bib:year>2004</bib:year>
+<!--optional fields-->
+        <bib:volume>24</bib:volume>
+        <bib:number/>
+        <bib:pages>118–119</bib:pages>
+        <bib:month>March</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Rabiner, L. R. and Gold, B.</bib:author>
+        <bib:title>Theory and Application of Digital Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1975</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Rabiner, L.R. and Schafer, R.W. and Rader, C.M.</bib:author>
+        <bib:title>The Chirp Z-Transform Algorithm</bib:title>
+        <bib:journal>IEEE Transactions on Audio Electroacoustics</bib:journal>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume>AU-17</bib:volume>
+        <bib:number/>
+        <bib:pages>86–92</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Winograd, S.</bib:author>
+        <bib:title>On Computing the Discrete Fourier Transform</bib:title>
+        <bib:journal>Proc. National Academy of Sciences, USA</bib:journal>
+        <bib:year>1976</bib:year>
+<!--optional fields-->
+        <bib:volume>73</bib:volume>
+        <bib:number/>
+        <bib:pages>1006–1006</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

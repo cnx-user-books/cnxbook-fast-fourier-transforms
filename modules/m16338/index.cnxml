@@ -1,0 +1,317 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Algorithms for Data with Restrictions</title>
+  <metadata>
+  <md:content-id>m16338</md:content-id><md:title>Algorithms for Data with Restrictions</md:title>
+  <md:abstract/>
+  <md:uuid>e3968d71-3852-4a9b-80ea-ac1bba6ee521</md:uuid>
+</metadata>
+
+<content>
+    <section id="uid1">
+      <title>Algorithms for Real Data</title>
+      <para id="id2255549">Many applications involve processing real data. It is
+inefficient to simply use a complex FFT on real data because
+arithmetic would be performed on the zero imaginary parts of the
+input, and, because of symmetries, output values would be calculated
+that are redundant. There are several approaches to developing
+special algorithms or to modifying complex algorithms for real data.</para>
+      <para id="id2255558">There are two methods which use a complex FFT in a special
+way to increase efficiency <link target-id="bid0"/>, <link target-id="bid1"/>. The first method
+uses a length-N complex FFT to compute two length-N real FFTs by
+putting the two real data sequences into the real and the
+imaginary parts of the input to a complex FFT. Because transforms
+of real data have even real parts and odd imaginary parts, it is
+possible to separate the transforms of the two inputs with 2N-4
+extra additions. This method requires, however, that two inputs be
+available at the same time.</para>
+      <para id="id2255581">The second method <link target-id="bid1"/> uses the fact that the last stage of
+a decimation-in-time radix-2 FFT combines two independent transforms
+of length N/2 to compute a length-N transform. If the data are
+real, the two half length transforms are calculated by the method
+described above and the last stage is carried out to calculate the
+total length-N FFT of the real data. It should be noted that the
+half-length FFT does not have to be calculated by a radix-2 FFT. In
+fact, it should be calculated by the most efficient complex-data
+algorithm possible, such as the SRFFT or the PFA. The separation of
+the two half-length transforms and the computation of the last stage
+requires <m:math><m:mrow><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>6</m:mn></m:mrow></m:math> real multiplications and <m:math><m:mrow><m:mo>(</m:mo><m:mn>5</m:mn><m:mo>/</m:mo><m:mn>2</m:mn><m:mo>)</m:mo><m:mi>N</m:mi><m:mo>-</m:mo><m:mn>6</m:mn></m:mrow></m:math> real additions
+<link target-id="bid1"/>.</para>
+      <para id="id2255650">It is possible to derive more efficient real-data algorithms
+directly rather than using a complex FFT. The basic idea is from
+Bergland <link target-id="bid2"/>, <link target-id="bid3"/> and Sande <link target-id="bid4"/> which, at each stage,
+uses the symmetries of a constant radix Cooley-Tukey FFT to minimize
+arithmetic and storage. In the usual derivation <link target-id="bid5"/> of the
+radix-2 FFT, the length-N transform is written as the combination of
+the length-N/2 DFT of the even indexed data and the length-N/2 DFT
+of the odd indexed data. If the input to each half-length DFT is
+real, the output will have Hermitian symmetry. Hence the output of
+each stage can be arranged so that the results of that stage stores
+the complex DFT with the real part located where half of the DFT
+would have gone, and the imaginary part located where the conjugate
+would have gone. This removes most of the redundant calculations
+and storage but slightly complicates the addressing. The resulting
+butterfly structure for this algorithm <link target-id="bid1"/> resembles that
+for the fast Hartley transform <link target-id="bid6"/>. The complete
+algorithm has one half the number of multiplications and N-2 fewer
+than half the additions of the basic complex FFT. Applying this
+approach to the split-radix FFT gives a particularly interesting
+algorithm <link target-id="bid7"/>, <link target-id="bid1"/>, <link target-id="bid8"/>.</para>
+      <para id="id2255721">Special versions of both the PFA and WFTA can also be
+developed for real data. Because the operations in the stages of
+the PFA can be commuted, it is possible to move the combination of
+the transform of the real part of the input and imaginary part to
+the last stage. Because the imaginary part of the input is zero,
+half of the algorithm is simply omitted. This results in the number
+of multiplications required for the real transform being exactly
+half of that required for complex data and the number of additions
+being about N less than half that required for the complex case
+because adding a pure real number to a pure imaginary number does
+not require an actual addition. Unfortunately, the indexing and data
+transfer becomes somewhat more complicated <link target-id="bid9"/>, <link target-id="bid1"/>. A
+similar approach can be taken with the WFTA <link target-id="bid9"/>, <link target-id="bid1"/>, <link target-id="bid10"/>.</para>
+    </section>
+    <section id="uid2">
+      <title>Special Algorithms for input Data that is mostly Zero,
+for Calculating only a few Outputs, or where the Sampling is not Uniform</title>
+      <para id="id2255774">In some cases, most of the data to be transformed are zero. It is
+clearly wasteful to do arithmetic on that zero data. Another special
+case is when only a few DFT values are needed. It is likewise
+wasteful to calculate outputs that are not needed. We use a process
+called “pruning" to remove the unneeded operations.</para>
+      <para id="id2255788">In other cases, the data are non-uniform sampling of a continuous time
+signal <link target-id="bid11"/>.</para>
+    </section>
+    <section id="uid3">
+      <title>Algorithms for Approximate DFTs</title>
+      <para id="id2255805">There are applications where approximations to the DFT are all that
+is needed.<link target-id="bid12"/>, <link target-id="bid13"/></para>
+    </section>
+  </content>
+  <bib:file>
+    <bib:entry id="bid2">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bergland, G. D.</bib:author>
+        <bib:title>A Fast Fourier Transform Algorithm for Real-Valued Series</bib:title>
+        <bib:journal>Comm. ACM</bib:journal>
+        <bib:year>1968</bib:year>
+<!--optional fields-->
+        <bib:volume>11</bib:volume>
+        <bib:number>10</bib:number>
+        <bib:pages>703-710</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid3">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Bergland, G. D.</bib:author>
+        <bib:title>A Radix-8 Fast Fourier Transform Subroutine for Real-Valued Series</bib:title>
+        <bib:journal>IEEE Trans. on Audio an Electrocoustics</bib:journal>
+        <bib:year>1969</bib:year>
+<!--optional fields-->
+        <bib:volume>17</bib:volume>
+        <bib:number/>
+        <bib:pages>138-144</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid11">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Bagchi, S. and Mitra, S.</bib:author>
+        <bib:title>The Nonuniform Discrete Fourier Transform and Its Applications in Signal Processing</bib:title>
+        <bib:publisher>Kluwer Academic</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Boston</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid0">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Brigham, E. Oran</bib:author>
+        <bib:title>The Fast Fourier Transform and Its Applications</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note>Expansion of the 1974 book</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid7">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P.</bib:author>
+        <bib:title>Implementation of `Split-Radix' FFT Algorithms for Complex, Real, and Real-Symmetric Data</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume>34</bib:volume>
+        <bib:number/>
+        <bib:pages>285–295</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note>A shorter version appeared in the ICASSP-85 Proceedings, p. 20.6, March 1985</bib:note>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid8">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Duhamel, P. and Vetterli, M.</bib:author>
+        <bib:title>Cyclic Convolution of Real Sequences: Hartley versus Fourier and New Schemes</bib:title>
+        <bib:journal>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP-86)</bib:journal>
+        <bib:year>1986</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:number/>
+        <bib:pages>6.5</bib:pages>
+        <bib:month>April</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid12">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, Haitao and Burrus, C. Sidney</bib:author>
+        <bib:title>Approximate FFT via the Discrete Wavelet Transform</bib:title>
+        <bib:booktitle>Proceedings of SPIE Conference 2825</bib:booktitle>
+        <bib:year>1996</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages/>
+        <bib:address>Denver</bib:address>
+        <bib:month>August 6–9</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid13">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Guo, Haitao and Burrus, C. Sidney</bib:author>
+        <bib:title>Wavelet Transform Based Fast Approximate Fourier Transform</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1997</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:volume>3</bib:volume>
+        <bib:series/>
+        <bib:pages>III:1973–1976</bib:pages>
+        <bib:address>IEEE ICASSP-97, Munich</bib:address>
+        <bib:month>April 21–24</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid9">
+      <bib:inproceedings>
+<!--required fields-->
+        <bib:author>Heideman, M. T. and Johnson, H. W. and Burrus, C. S.</bib:author>
+        <bib:title>Prime Factor FFT Algorithms for Real–Valued Series</bib:title>
+        <bib:booktitle>Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing</bib:booktitle>
+        <bib:year>1984</bib:year>
+<!--optional fields-->
+        <bib:editor/>
+        <bib:number/>
+        <bib:series/>
+        <bib:pages>28A.7.1–4</bib:pages>
+        <bib:address>San Diego, CA</bib:address>
+        <bib:month>March</bib:month>
+        <bib:organization/>
+        <bib:publisher/>
+        <bib:note/>
+      </bib:inproceedings>
+    </bib:entry>
+    <bib:entry id="bid5">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Oppenheim, A. V. and Schafer, R. W.</bib:author>
+        <bib:title>Discrete-Time Signal Processing</bib:title>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1999</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition>Second</bib:edition>
+        <bib:month/>
+        <bib:note>Earlier editions in 1975 and 1989</bib:note>
+      </bib:book>
+    </bib:entry>
+    <bib:entry id="bid10">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Parsons, T. W.</bib:author>
+        <bib:title>A Winograd-Fourier Transform Algorithm for Real-Valued Data</bib:title>
+        <bib:journal>IEEE Trans. on ASSP</bib:journal>
+        <bib:year>1979</bib:year>
+<!--optional fields-->
+        <bib:volume>27</bib:volume>
+        <bib:number/>
+        <bib:pages>398-402</bib:pages>
+        <bib:month>August</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid4">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sande, G.</bib:author>
+        <bib:title>Fast Fourier Transform - A Gobally Complex Algorithm with Locally Real Implementations</bib:title>
+        <bib:journal>Proc. 4th Annual Princeton Conference on Information Sciences and Systems</bib:journal>
+        <bib:year>1970</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:number/>
+        <bib:pages>136-142</bib:pages>
+        <bib:month>March</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid6">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Burrus, C. S. and Heideman, M. T.</bib:author>
+        <bib:title>On Computing the Discrete Hartley Transform</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume>33</bib:volume>
+        <bib:number>5</bib:number>
+        <bib:pages>1231–1238</bib:pages>
+        <bib:month>October</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:article>
+<!--required fields-->
+        <bib:author>Sorensen, H. V. and Jones, D. L. and Heideman, M. T. and Burrus, C. S.</bib:author>
+        <bib:title>Real Valued Fast Fourier Transform Algorithms</bib:title>
+        <bib:journal>IEEE Transactions on Acoustics, Speech, and Signal Processing</bib:journal>
+        <bib:year>1987</bib:year>
+<!--optional fields-->
+        <bib:volume>35</bib:volume>
+        <bib:number>6</bib:number>
+        <bib:pages>849–863</bib:pages>
+        <bib:month>June</bib:month>
+        <bib:note/>
+      </bib:article>
+    </bib:entry>
+  </bib:file>
+</document>

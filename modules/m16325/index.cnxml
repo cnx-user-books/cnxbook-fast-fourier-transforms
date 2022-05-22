@@ -1,0 +1,86 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Introduction: Fast Fourier Transforms</title>
+  <metadata>
+  <md:content-id>m16325</md:content-id><md:title>Introduction: Fast Fourier Transforms</md:title>
+  <md:abstract/>
+  <md:uuid>80670dcd-5b32-4524-a160-5039e86058a7</md:uuid>
+</metadata>
+
+<content>
+    <para id="id2255538">The development of fast algorithms usually consists of using special
+properties of the algorithm of interest to remove redundant or unnecessary
+operations of a direct implementation. Because of the periodicity,
+symmetries, and orthogonality of the basis functions and the special
+relationship with convolution, the discrete Fourier transform
+(DFT) has enormous capacity for improvement of its arithmetic efficiency.</para>
+    <para id="id2255548">There are four main approaches to formulating efficient DFT <link target-id="bid0"/> algorithms. The first two break a DFT into multiple shorter ones.
+This is done in <link document="m16326">Multidimensional Index Mapping</link> by using an index map and in
+<link document="m16327">Polynomial Description of Signals</link> by polynomial reduction. The third is <link document="m16330">Factoring the Signal Processing Operators</link> which factors the DFT operator (matrix) into sparse factors.
+<link document="m16328">The DFT as Convolution or Filtering</link> develops a method which converts a prime-length DFT
+into cyclic convolution. Still another approach is interesting where, for certain cases, the evaluation of the DFT can be posed recursively
+as evaluating a DFT in terms of two half-length DFTs which are each in turn
+evaluated by a quarter-length DFT and so on.</para>
+    <para id="id2255580">The very important computational complexity theorems of
+Winograd are stated and briefly discussed in <link document="m16333">Winograd's Short DFT Algorithms</link>. The
+specific details and evaluations of the Cooley-Tukey FFT and
+Split-Radix FFT are given in <link document="m16334">The Cooley-Tukey Fast Fourier Transform Algorithm</link>, and PFA and WFTA are covered in <link document="m16335">The Prime Factor and Winograd Fourier Transform Algorithms</link>. A short discussion of high speed
+convolution is given in <link document="m16339">Convolution Algorithms</link>, both for its own
+importance, and its theoretical connection to the DFT.
+We also present the chirp, Goertzel, QFT, NTT, SR-FFT, Approx FFT,
+Autogen, and programs to implement some of these.
+</para>
+    <para id="element-755">Ivan Selesnick gives a short introduction in <link document="m16333">Winograd's Short DFT Algorithms</link> to using Winograd's 
+techniques to give a highly structured development of short prime
+length FFTs and describes a program that will automaticlly write these
+programs.  Markus Pueschel presents his ``Algebraic Signal Processing" in
+<link document="m16331">DFT and FFT: An Algebraic View</link> on describing the various FFT algorithms.  And Steven Johnson 
+describes the FFTW (Fastest Fourier Transform in the West) in <link document="m16336">Implementing FFTs in Practice</link> 
+</para><para id="id2255602">The organization of the book represents the various approaches
+to understanding the FFT and to obtaining efficient computer programs.
+It also shows the intimate relationship between theory and implementation
+that can be used to real advantage. The disparity in material devoted
+to the various approaches represent the tastes of this author, not any
+intrinsic differences in value.</para>
+    <para id="id2255612">A fairly long list of references is given but it is impossible to
+be truly complete. I have referenced the work that I have used and that I am aware of. The collection of computer programs is also somewhat idiosyncratic. They are in Matlab and Fortran because that is what I have used over the years. They also are written primarily for their educational value although some are quite efficient. There is excellent content in the Connexions book by Doug Jones <link target-id="bid1"/>.</para>
+  </content>
+  <bib:file>
+    <bib:entry id="bid0">
+      <bib:incollection>
+<!--required fields-->
+        <bib:author>Burrus, C. S.</bib:author>
+        <bib:title>Efficient Fourier Transform and Convolution Algorithms</bib:title>
+        <bib:booktitle>Advanced Topics in Signal Processing</bib:booktitle>
+        <bib:publisher>Prentice-Hall</bib:publisher>
+        <bib:year>1988</bib:year>
+<!--optional fields-->
+        <bib:editor>Lim, J. S. and Oppenheim, A. V.</bib:editor>
+        <bib:number/>
+        <bib:series/>
+        <bib:type/>
+        <bib:chapter>4</bib:chapter>
+        <bib:pages>199–245</bib:pages>
+        <bib:address>Englewood Cliffs, NJ</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:incollection>
+    </bib:entry>
+    <bib:entry id="bid1">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Jones, Douglas L.</bib:author>
+        <bib:title>The DFT, FFT, and Practical Spectral Analysis</bib:title>
+        <bib:publisher>Connexions</bib:publisher>
+        <bib:year>2007</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address/>
+        <bib:edition/>
+        <bib:month>February</bib:month>
+        <bib:note>http://cnx.org/content/col10281/1.2/</bib:note>
+      </bib:book>
+    </bib:entry>
+  </bib:file>
+</document>

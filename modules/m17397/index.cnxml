@@ -1,0 +1,1616 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:md="http://cnx.rice.edu/mdml" xmlns:bib="http://bibtexml.sf.net/">
+  <title>Appendix 3: FFT Computer Programs</title>
+  <metadata>
+  <md:content-id>m17397</md:content-id><md:title>Appendix 3: FFT Computer Programs</md:title>
+  <md:abstract>Fortran programs for efficient DFT, Cooley-Tukey, and Prime Factor Algorithm FFTs.</md:abstract>
+  <md:uuid>f30219bb-1306-46d7-a886-cbda06dbb96a</md:uuid>
+</metadata>
+
+<content>
+ <section id="uid1">
+      <title>Goertzel Algorithm</title>
+      <para id="id22555418">A FORTRAN implementation of the first-order Goertzel algorithm with
+in-order input as given in (<link target-id=""/>) and <link target-id="bid0"/> is given below.</para>
+      <code id="uid12321514613" display="block" class="listing">C----------------------------------------------
+C   GOERTZEL'S  DFT  ALGORITHM
+C   First order, input inorder
+C   C. S. BURRUS,   SEPT 1983
+C---------------------------------------------
+    SUBROUTINE DFT(X,Y,A,B,N)
+    REAL X(260), Y(260), A(260), B(260)
+    Q = 6.283185307179586/N
+    DO 20 J=1, N
+       C  = COS(Q*(J-1))
+       S  = SIN(Q*(J-1))
+       AT = X(1)
+       BT = Y(1)
+       DO 30 I = 2, N
+          T  = C*AT - S*BT + X(I)
+          BT = C*BT + S*AT + Y(I)
+          AT = T
+30     CONTINUE
+       A(J) = C*AT - S*BT
+       B(J) = C*BT + S*AT
+20  CONTINUE
+    RETURN
+    END
+<caption>First Order Goertzel Algorithm</caption></code>
+    </section>
+  <section id="uid13215452351">
+      <title>Second Order Goertzel Algorithm</title>
+      <para id="id2255549">Below is the program for a second order Goertzel algorithm.</para>
+      <code id="uid22345242" display="block" class="listing">C----------------------------------------------
+C   GOERTZEL'S  DFT  ALGORITHM
+C   Second order, input inorder
+C   C. S. BURRUS,   SEPT 1983
+C---------------------------------------------
+    SUBROUTINE DFT(X,Y,A,B,N)
+    REAL X(260), Y(260), A(260), B(260)
+C
+    Q = 6.283185307179586/N
+    DO 20 J = 1, N
+       C  = COS(Q*(J-1))
+       S  = SIN(Q*(J-1))
+       CC = 2*C
+       A2 = 0
+       B2 = 0
+       A1 = X(1)
+       B1 = Y(1)
+       DO 30 I = 2, N
+          T  = A1
+          A1 = CC*A1 - A2 + X(I)
+          A2 = T
+          T  = B1
+          B1 = CC*B1 - B2 + Y(I)
+          B2 = T
+30     CONTINUE
+       A(J) = C*A1 - A2 - S*B1
+       B(J) = C*B1 - B2 + S*A1
+20  CONTINUE
+C
+    RETURN
+    END
+<caption>Second Order Goertzel Algorithm</caption></code>
+    </section>
+
+<section id="uid11426536725731">
+      <title>Second Order Goertzel Algorithm 2</title>
+      <para id="id2255549234523">Second order Goertzel algorithm that calculates two outputs at a time.</para>
+      <code id="id19800828" display="block">C-------------------------------------------------------
+C GOERTZEL'S  DFT  ALGORITHM,  Second order
+C Input inorder, output by twos;  C.S. Burrus, SEPT 1991
+C-------------------------------------------------------
+    SUBROUTINE DFT(X,Y,A,B,N)
+    REAL X(260), Y(260), A(260), B(260)
+    Q = 6.283185307179586/N
+    DO 20 J = 1, N/2 + 1
+       C  = COS(Q*(J-1))
+       S  = SIN(Q*(J-1))
+       CC = 2*C
+       A2 = 0
+       B2 = 0
+       A1 = X(1)
+       B1 = Y(1)
+       DO 30 I = 2, N
+          T  = A1
+          A1 = CC*A1 - A2 + X(I)
+          A2 = T
+          T  = B1
+          B1 = CC*B1 - B2 + Y(I)
+          B2 = T
+30     CONTINUE
+       A2  = C*A1 - A2
+       T   = S*B1
+       A(J)     = A2 - T
+       A(N-J+2) = A2 + T
+       B2  = C*B1 - B2
+       T   = S*A1
+       B(J)     = B2 + T
+       B(N-J+2) = B2 - T
+20  CONTINUE
+    RETURN
+    END
+ 
+Figure.  Second Order Goertzel Calculating Two Outputs at a Time
+</code>
+    </section>
+<section id="uid11145236236432624351">
+      <title>Basic QFT Algorithm</title>
+      <para id="id2255548">A FORTRAN implementation of the basic QFT algorithm is given below to show
+how the theory is implemented. The program is written for clarity, not to
+minimize the number of floating point operations.</para>
+      <code id="uid2" display="block" class="listing">C
+   SUBROUTINE QDFT(X,Y,XX,YY,NN)
+   REAL X(0:260),Y(0:260),XX(0:260),YY(0:260)
+   C
+   N1 = NN - 1
+   N2 = N1/2
+   N21 = NN/2
+   Q   = 6.283185308/NN
+   DO 2 K = 0, N21
+      SSX = X(0)
+      SSY = Y(0)
+      SDX = 0
+      SDY = 0
+      IF (MOD(NN,2).EQ.0) THEN
+         SSX = SSX + COS(3.1426*K)*X(N21)
+         SSY = SSY + COS(3.1426*K)*Y(N21)
+      ENDIF
+      DO 3 N = 1, N2
+         SSX = SSX + (X(N) + X(NN-N))*COS(Q*N*K)
+         SSY = SSY + (Y(N) + Y(NN-N))*COS(Q*N*K)
+         SDX = SDX + (X(N) - X(NN-N))*SIN(Q*N*K)
+         SDY = SDY + (Y(N) - Y(NN-N))*SIN(Q*N*K)
+3     CONTINUE
+      XX(K) = SSX + SDY
+      YY(K) = SSY - SDX
+      XX(NN-K) = SSX - SDY
+      YY(NN-K) = SSY + SDX
+2  CONTINUE
+   RETURN
+   END
+ 
+<caption>Simple QFT Fortran Program</caption></code>
+    </section>
+
+<section id="uid1254256377352">
+      <title>Basic Radix-2 FFT Algorithm</title>
+      <para id="id2255549426236463">Below is the Fortran code for a simple Decimation-in-Frequency, Radix-2,
+one butterfly Cooley-Tukey FFT followed by a bit-reversing unscrambler.</para>
+      <code id="id19800953" display="block">C
+C   A COOLEY-TUKEY RADIX-2, DIF  FFT PROGRAM
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C      C. S. BURRUS, RICE UNIVERSITY, SEPT 1983
+C---------------------------------------------------------
+    SUBROUTINE FFT (X,Y,N,M)
+    REAL X(1), Y(1)
+C--------------MAIN FFT LOOPS-----------------------------
+C
+    N2 = N
+    DO 10 K = 1, M
+        N1 = N2
+        N2 = N2/2
+        E  = 6.283185307179586/N1
+        A  = 0
+        DO 20 J = 1, N2
+        C = COS (A)
+        S = SIN (A)
+        A = J*E
+        DO 30 I = J, N, N1
+                    L = I + N2
+                    XT   = X(I) - X(L)
+                    X(I) = X(I) + X(L)
+                    YT   = Y(I) - Y(L)
+                    Y(I) = Y(I) + Y(L)
+                    X(L) = C*XT + S*YT
+                    Y(L) = C*YT - S*XT
+   30           CONTINUE
+   20       CONTINUE
+   10   CONTINUE
+C
+C------------DIGIT REVERSE COUNTER-----------------
+  100   J = 1
+    N1 = N - 1
+    DO 104 I=1, N1
+        IF (I.GE.J) GOXTO 101
+        XT = X(J)
+        X(J) = X(I)
+        X(I) = XT
+        XT   = Y(J)
+        Y(J) = Y(I)
+        Y(I) = XT
+  101       K = N/2
+  102       IF (K.GE.J) GOTO 103
+        J = J - K
+        K = K/2
+        GOTO 102
+  103       J = J + K
+  104   CONTINUE
+    RETURN
+    END
+ 
+Figure: Radix-2, DIF, One Butterfly Cooley-Tukey FFT
+ 
+</code>
+    </section>
+
+<section id="uid123783568856">
+      <title>Basic DIT Radix-2 FFT Algorithm</title>
+      <para id="id22555493426324">Below is the Fortran code for a simple Decimation-in-Time, Radix-2,
+one butterfly Cooley-Tukey FFT preceeded by a bit-reversing scrambler.</para>
+      <code id="id16233732" display="block">C
+C   A COOLEY-TUKEY RADIX-2, DIT  FFT PROGRAM
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C      C. S. BURRUS, RICE UNIVERSITY, SEPT 1985
+C
+C---------------------------------------------------------
+    SUBROUTINE FFT (X,Y,N,M)
+    REAL X(1), Y(1)
+C------------DIGIT REVERSE COUNTER-----------------
+C
+  100   J = 1
+    N1 = N - 1
+    DO 104 I=1, N1
+        IF (I.GE.J) GOTO 101
+            XT = X(J)
+            X(J) = X(I)
+            X(I) = XT
+            XT   = Y(J)
+            Y(J) = Y(I)
+            Y(I) = XT
+  101       K = N/2
+  102       IF (K.GE.J) GOTO 103
+        J = J - K
+        K = K/2
+        GOTO 102
+  103       J = J + K
+  104   CONTINUE
+C--------------MAIN FFT LOOPS-----------------------------
+C
+    N2 = 1
+    DO 10 K = 1, M
+        E  = 6.283185307179586/(2*N2)
+        A  = 0
+        DO 20 J = 1, N2
+        C = COS (A)
+        S = SIN (A)
+        A = J*E
+        DO 30 I = J, N, 2*N2
+                    L = I + N2
+                    XT = C*X(L) + S*Y(L)
+                    YT = C*Y(L) - S*X(L)
+                    X(L) = X(I) - XT
+                    X(I) = X(I) + XT
+                    Y(L) = Y(I) - YT
+                    Y(I) = Y(I) + YT
+   30           CONTINUE
+   20       CONTINUE
+        N2 = N2+N2
+   10   CONTINUE
+C
+    RETURN
+    END
+</code>
+    </section>
+<section id="uid1445234523">
+      <title>DIF Radix-2 FFT Algorithm</title>
+      <para id="id2255549243523">Below is the Fortran code for a Decimation-in-Frequency, Radix-2,
+three butterfly Cooley-Tukey FFT followed by a bit-reversing unscrambler.</para>
+      <code id="id16233793" display="block">C   A COOLEY-TUKEY RADIX 2, DIF  FFT PROGRAM
+C   THREE-BF, MULT BY  1  AND  J  ARE REMOVED
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C   TABLE LOOK-UP OF W VALUES
+C      C. S. BURRUS, RICE UNIVERSITY, SEPT 1983
+C---------------------------------------------------------
+    SUBROUTINE FFT (X,Y,N,M,WR,WI)
+    REAL X(1), Y(1), WR(1), WI(1)
+C--------------MAIN FFT LOOPS-----------------------------
+C
+    N2 = N
+    DO 10 K = 1, M
+        N1 = N2
+        N2 = N2/2
+        JT = N2/2 + 1
+        DO 1 I = 1, N, N1
+        L = I + N2
+        T    = X(I) - X(L)
+        X(I) = X(I) + X(L)
+        X(L) = T
+        T    = Y(I) - Y(L)
+        Y(I) = Y(I) + Y(L)
+        Y(L) = T
+   1        CONTINUE
+        IF (K.EQ.M) GOTO 10
+        IE  = N/N1
+        IA  = 1
+        DO 20 J = 2, N2
+        IA = IA + IE
+        IF (J.EQ.JT) GOTO 50
+        C = WR(IA)
+        S = WI(IA)
+        DO 30 I = J, N, N1
+            L = I + N2
+            T    = X(I) - X(L)
+            X(I) = X(I) + X(L)
+            TY   = Y(I) - Y(L)
+            Y(I) = Y(I) + Y(L)
+            X(L) = C*T + S*TY
+            Y(L) = C*TY - S*T
+   30       CONTINUE
+        GOTO 25
+   50       DO 40 I = J, N, N1
+            L = I + N2
+            T    = X(I) - X(L)
+            X(I) = X(I) + X(L)
+            TY   = Y(I) - Y(L)
+            Y(I) = Y(I) + Y(L)
+            X(L) = TY
+            Y(L) =-T
+   40       CONTINUE
+   25       A = J*E
+   20       CONTINUE
+   10   CONTINUE
+C------------DIGIT REVERSE COUNTER Goes here----------
+    RETURN
+    END
+ 
+</code>
+    </section>
+ <section id="uid4362423452632341">
+      <title>Basic DIF Radix-4 FFT Algorithm</title>
+      <para id="id22555492435262443">Below is the Fortran code for a simple Decimation-in-Frequency, Radix-4,
+one butterfly Cooley-Tukey FFT to be followed by an unscrambler.</para>
+      <code id="id16221364" display="block">C   A COOLEY-TUKEY RADIX-4 DIF  FFT PROGRAM
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C   LENGTH IS  N = 4 ** M
+C     C. S. BURRUS, RICE UNIVERSITY, SEPT 1983
+C---------------------------------------------------------
+    SUBROUTINE  FFT4 (X,Y,N,M)
+    REAL X(1), Y(1)
+C--------------MAIN FFT LOOPS-----------------------------
+    N2 = N
+    DO 10 K = 1, M
+        N1 = N2
+        N2 = N2/4
+        E = 6.283185307179586/N1
+        A = 0
+C--------------------MAIN BUTTERFLIES-------------------
+        DO 20 J=1, N2
+            B    = A + A
+            C    = A + B
+            CO1  = COS(A)
+            CO2  = COS(B)
+            CO3  = COS(C)
+            SI1  = SIN(A)
+            SI2  = SIN(B)
+            SI3  = SIN(C)
+            A    = J*E
+C----------------BUTTERFLIES WITH SAME W---------------
+            DO 30 I=J, N, N1
+            I1 = I  + N2
+            I2 = I1 + N2
+            I3 = I2 + N2
+            R1 = X(I ) + X(I2)
+            R3 = X(I ) - X(I2)
+            S1 = Y(I ) + Y(I2)
+            S3 = Y(I ) - Y(I2)
+            R2 = X(I1) + X(I3)
+            R4 = X(I1) - X(I3)
+            S2 = Y(I1) + Y(I3)
+            S4 = Y(I1) - Y(I3)
+            X(I) = R1 + R2
+            R2   = R1 - R2
+            R1   = R3 - S4
+            R3   = R3 + S4
+            Y(I) = S1 + S2
+            S2   = S1 - S2
+            S1   = S3 + R4
+            S3   = S3 - R4
+            X(I1) = CO1*R3 + SI1*S3
+            Y(I1) = CO1*S3 - SI1*R3
+            X(I2) = CO2*R2 + SI2*S2
+            Y(I2) = CO2*S2 - SI2*R2
+            X(I3) = CO3*R1 + SI3*S1
+            Y(I3) = CO3*S1 - SI3*R1
+  30            CONTINUE
+  20        CONTINUE
+  10    CONTINUE
+C-----------DIGIT REVERSE COUNTER goes here-----
+    RETURN
+    END
+</code>
+    </section>
+<section id="uid556671241642643">
+      <title>Basic DIF Radix-4 FFT Algorithm</title>
+      <para id="id225554954324536">Below is the Fortran code for a Decimation-in-Frequency, Radix-4,
+three butterfly Cooley-Tukey FFT followed by a bit-reversing unscrambler.
+Twiddle factors are precalculated and stored in arrays WR and WI.</para>
+      <code id="id16221434" display="block">C
+C   A COOLEY-TUKEY RADIX-4 DIF  FFT PROGRAM
+C   THREE BF, MULTIPLICATIONS BY  1, J, ETC. ARE REMOVED
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C   LENGTH IS  N = 4 ** M
+C   TABLE LOOKUP OF W VALUES
+C
+C     C. S. BURRUS, RICE UNIVERSITY,  SEPT 1983
+C
+C---------------------------------------------------------
+C
+    SUBROUTINE  FFT4 (X,Y,N,M,WR,WI)
+    REAL X(1), Y(1), WR(1), WI(1)
+    DATA C21 / 0.707106778 /
+C
+C--------------MAIN FFT LOOPS-----------------------------
+C
+    N2 = N
+    DO 10 K = 1, M
+        N1 = N2
+        N2 = N2/4
+        JT = N2/2 + 1
+C---------------SPECIAL BUTTERFLY FOR W = 1---------------
+        DO 1 I = 1, N, N1
+            I1 = I  + N2
+            I2 = I1 + N2
+            I3 = I2 + N2
+            R1 = X(I ) + X(I2)
+            R3 = X(I ) - X(I2)
+            S1 = Y(I ) + Y(I2)
+            S3 = Y(I ) - Y(I2)
+            R2 = X(I1) + X(I3)
+            R4 = X(I1) - X(I3)
+            S2 = Y(I1) + Y(I3)
+            S4 = Y(I1) - Y(I3)
+C
+            X(I) = R1 + R2
+            X(I2)= R1 - R2
+            X(I3)= R3 - S4
+            X(I1)= R3 + S4
+C
+            Y(I) = S1 + S2
+            Y(I2)= S1 - S2
+            Y(I3)= S3 + R4
+            Y(I1)= S3 - R4
+C
+   1        CONTINUE
+        IF (K.EQ.M) GOTO 10
+        IE = N/N1
+        IA1 = 1
+ 
+C--------------GENERAL BUTTERFLY-----------------
+        DO 20 J = 2, N2
+        IA1  = IA1 + IE
+        IF (J.EQ.JT) GOTO 50
+        IA2  = IA1 + IA1 - 1
+            IA3  = IA2 + IA1 - 1
+            CO1  = WR(IA1)
+            CO2  = WR(IA2)
+            CO3  = WR(IA3)
+            SI1  = WI(IA1)
+            SI2  = WI(IA2)
+            SI3  = WI(IA3)
+C----------------BUTTERFLIES WITH SAME W---------------
+            DO 30 I = J, N, N1
+            I1 = I  + N2
+            I2 = I1 + N2
+            I3 = I2 + N2
+            R1 = X(I ) + X(I2)
+            R3 = X(I ) - X(I2)
+            S1 = Y(I ) + Y(I2)
+            S3 = Y(I ) - Y(I2)
+            R2 = X(I1) + X(I3)
+            R4 = X(I1) - X(I3)
+            S2 = Y(I1) + Y(I3)
+            S4 = Y(I1) - Y(I3)
+C
+            X(I) = R1 + R2
+            R2   = R1 - R2
+            R1   = R3 - S4
+            R3   = R3 + S4
+C
+            Y(I) = S1 + S2
+            S2   = S1 - S2
+            S1   = S3 + R4
+            S3   = S3 - R4
+C
+            X(I1) = CO1*R3 + SI1*S3
+            Y(I1) = CO1*S3 - SI1*R3
+            X(I2) = CO2*R2 + SI2*S2
+            Y(I2) = CO2*S2 - SI2*R2
+            X(I3) = CO3*R1 + SI3*S1
+            Y(I3) = CO3*S1 - SI3*R1
+  30            CONTINUE
+        GOTO 20
+C------------------SPECIAL BUTTERFLY FOR  W = J-----------
+  50            DO 40 I = J, N, N1
+            I1 = I  + N2
+            I2 = I1 + N2
+            I3 = I2 + N2
+            R1 = X(I ) + X(I2)
+            R3 = X(I ) - X(I2)
+            S1 = Y(I ) + Y(I2)
+            S3 = Y(I ) - Y(I2)
+            R2 = X(I1) + X(I3)
+            R4 = X(I1) - X(I3)
+            S2 = Y(I1) + Y(I3)
+            S4 = Y(I1) - Y(I3)
+C
+            X(I) = R1 + R2
+            Y(I2)=-R1 + R2
+            R1   = R3 - S4
+            R3   = R3 + S4
+C
+            Y(I) = S1 + S2
+            X(I2)= S1 - S2
+            S1   = S3 + R4
+            S3   = S3 - R4
+C
+            X(I1) = (S3 + R3)*C21
+            Y(I1) = (S3 - R3)*C21
+            X(I3) = (S1 - R1)*C21
+            Y(I3) =-(S1 + R1)*C21
+  40            CONTINUE
+  20        CONTINUE
+  10    CONTINUE
+C-----------DIGIT REVERSE COUNTER----------
+  100   J = 1
+    N1 = N - 1
+    DO 104 I = 1, N1
+        IF (I.GE.J) GOTO 101
+        R1   = X(J)
+        X(J) = X(I)
+        X(I) = R1
+        R1   = Y(J)
+        Y(J) = Y(I)
+        Y(I) = R1
+ 101        K = N/4
+ 102        IF (K*3.GE.J) GOTO 103
+                J = J - K*3
+                K = K/4
+                GOTO 102
+ 103        J = J + K
+ 104    CONTINUE
+    RETURN
+    END
+ 
+</code>
+    </section>
+
+<section id="uid167468648234534">
+      <title>Basic DIF Split Radix FFT Algorithm</title>
+      <para id="id225554435246419">Below is the Fortran code for a simple Decimation-in-Frequency, Split-Radix,
+one butterfly FFT to be followed by a bit-reversing unscrambler.</para>
+      <code id="id16221536" display="block">C   A DUHAMEL-HOLLMANN SPLIT RADIX  FFT PROGRAM
+C   FROM: ELECTRONICS LETTERS, JAN. 5, 1984
+C   COMPLEX INPUT DATA IN ARRAYS X AND Y
+C   LENGTH IS  N = 2 ** M
+C     C. S. BURRUS, RICE UNIVERSITY, MARCH 1984
+C
+C---------------------------------------------------------
+    SUBROUTINE  FFT (X,Y,N,M)
+    REAL X(1), Y(1)
+C--------------MAIN FFT LOOPS-----------------------------
+C
+    N1 = N
+    N2 = N/2
+    IP = 0
+    IS = 1
+    A  = 6.283185307179586/N
+    DO 10 K = 1, M-1
+        JD = N1 + N2
+        N1 = N2
+        N2 = N2/2
+        J0 = N1*IP + 1
+        IP = 1 - IP
+        DO 20 J = J0, N, JD
+            JS = 0
+        JT = J + N2 - 1
+            DO 30 I = J, JT
+            JSS= JS*IS
+            JS = JS + 1
+                C1 = COS(A*JSS)
+                C3 = COS(3*A*JSS)
+                S1 = -SIN(A*JSS)
+                S3 = -SIN(3*A*JSS)
+            I1 = I  + N2
+            I2 = I1 + N2
+            I3 = I2 + N2
+            R1    = X(I ) + X(I2)
+            R2    = X(I ) - X(I2)
+            R3    = X(I1) - X(I3)
+            X(I2) = X(I1) + X(I3)
+            X(I1) = R1
+C
+            R1    = Y(I ) + Y(I2)
+            R4    = Y(I ) - Y(I2)
+            R5    = Y(I1) - Y(I3)
+            Y(I2) = Y(I1) + Y(I3)
+            Y(I1) = R1
+C
+            R1    = R2 - R5
+            R2    = R2 + R5
+            R5    = R4 + R3
+            R4    = R4 - R3
+C
+            X(I)  = C1*R1 + S1*R5
+            Y(I)  = C1*R5 - S1*R1
+            X(I3) = C3*R2 + S3*R4
+            Y(I3) = C3*R4 - S3*R2
+  30            CONTINUE
+  20        CONTINUE
+        IS = IS + IS
+  10    CONTINUE
+    IP = 1 - IP
+    J0 = 2 - IP
+    DO 5 I = J0, N-1, 3
+       I1 = I + 1
+       R1    = X(I) + X(I1)
+       X(I1) = X(I) - X(I1)
+       X(I)  = R1
+       R1    = Y(I) + Y(I1)
+       Y(I1) = Y(I) - Y(I1)
+       Y(I)  = R1
+   5    CONTINUE
+    RETURN
+    END
+</code>
+    </section>
+<section id="uid3678812534523">
+      <title>DIF Split Radix FFT Algorithm</title>
+      <para id="id2255542345239">Below is the Fortran code for a simple Decimation-in-Frequency, Split-Radix,
+two butterfly FFT to be followed by a bit-reversing unscrambler. Twiddle
+factors are precalculated and stored in arrays WR and WI.</para>
+      <code id="id16221607" display="block">C--------------------------------------------------------------C
+C       A DUHAMEL-HOLLMAN SPLIT RADIX FFT                      C
+C       REF: ELECTRONICS LETTERS, JAN. 5, 1984                 C
+C       COMPLEX INPUT AND OUTPUT DATA IN ARRAYS X AND Y        C
+C       LENGTH IS N = 2 ** M,  OUTPUT IN BIT-REVERSED ORDER    C
+C   TWO BUTTERFLIES TO REMOVE MULTS BY UNITY               C
+C       SPECIAL LAST TWO STAGES                                C
+C   TABLE LOOK-UP OF SINE AND COSINE VALUES            C
+C       C.S. BURRUS,       RICE UNIV.       APRIL 1985         C
+C--------------------------------------------------------------C
+C
+        SUBROUTINE FFT(X,Y,N,M,WR,WI)
+        REAL X(1),Y(1),WR(1),WI(1)
+    C81= 0.707106778
+        N2 = 2*N
+        DO  10 K = 1, M-3
+        IS  = 1
+        ID  = N2
+        N2 = N2/2
+        N4 = N2/4
+ 2      DO 1 I0 = IS, N-1, ID
+        I1 = I0 + N4
+        I2 = I1 + N4
+            I3 = I2 + N4
+        R1    = X(I0) - X(I2)
+        X(I0) = X(I0) + X(I2)
+        R2    = Y(I1) - Y(I3)
+        Y(I1) = Y(I1) + Y(I3)
+        X(I2) = R1 + R2
+        R2    = R1 - R2
+        R1    = X(I1) - X(I3)
+        X(I1) = X(I1) + X(I3)
+            X(I3) = R2
+            R2    = Y(I0) - Y(I2)
+                Y(I0) = Y(I0) + Y(I2)
+            Y(I2) =-R1 + R2
+            Y(I3) = R1 + R2
+  1     CONTINUE
+        IS = 2*ID - N2 + 1
+        ID = 4*ID
+            IF (IS.LT.N) GOTO 2
+        IE  = N/N2
+            IA1 = 1
+            DO  20 J = 2, N4
+                IA1 = IA1 + IE
+                IA3 = 3*IA1 - 2
+                CC1 = WR(IA1)
+                SS1 = WI(IA1)
+                CC3 = WR(IA3)
+                SS3 = WI(IA3)
+                IS  = J
+                ID  = 2*N2
+ 40             DO 30 I0 = IS, N-1, ID
+                    I1 = I0 + N4
+                    I2 = I1 + N4
+                    I3 = I2 + N4
+C
+                    R1    = X(I0) - X(I2)
+                    X(I0) = X(I0) + X(I2)
+                    R2    = X(I1) - X(I3)
+                    X(I1) = X(I1) + X(I3)
+                    S1    = Y(I0) - Y(I2)
+                    Y(I0) = Y(I0) + Y(I2)
+                    S2    = Y(I1) - Y(I3)
+                    Y(I1) = Y(I1) + Y(I3)
+C
+                    S3    = R1 - S2
+                    R1    = R1 + S2
+                    S2    = R2 - S1
+                    R2    = R2 + S1
+                    X(I2) = R1*CC1 - S2*SS1
+                    Y(I2) =-S2*CC1 - R1*SS1
+                    X(I3) = S3*CC3 + R2*SS3
+                    Y(I3) = R2*CC3 - S3*SS3
+ 30             CONTINUE
+                IS = 2*ID - N2 + J
+                ID = 4*ID
+                IF (IS.LT.N) GOTO 40
+  20        CONTINUE
+  10    CONTINUE
+C
+        IS =  1
+        ID = 32
+  50    DO 60 I = IS, N, ID
+            I0    = I + 8
+            DO 15 J = 1, 2
+               R1 = X(I0)   + X(I0+2)
+               R3 = X(I0)   - X(I0+2)
+               R2 = X(I0+1) + X(I0+3)
+               R4 = X(I0+1) - X(I0+3)
+               X(I0)   = R1 + R2
+               X(I0+1) = R1 - R2
+               R1 = Y(I0)   + Y(I0+2)
+               S3 = Y(I0)   - Y(I0+2)
+               R2 = Y(I0+1) + Y(I0+3)
+               S4 = Y(I0+1) - Y(I0+3)
+               Y(I0)   = R1 + R2
+               Y(I0+1) = R1 - R2
+               Y(I0+2) = S3 - R4
+               Y(I0+3) = S3 + R4
+               X(I0+2) = R3 + S4
+               X(I0+3) = R3 - S4
+               I0 = I0 + 4
+  15        CONTINUE
+  60    CONTINUE
+            IS = 2*ID - 15
+            ID = 4*ID
+        IF (IS.LT.N) GOTO 50
+C
+        IS =  1
+        ID = 16
+  55    DO 65 I0 = IS, N, ID
+                R1 = X(I0)   + X(I0+4)
+            R5 = X(I0)   - X(I0+4)
+            R2 = X(I0+1) + X(I0+5)
+            R6 = X(I0+1) - X(I0+5)
+            R3 = X(I0+2) + X(I0+6)
+            R7 = X(I0+2) - X(I0+6)
+            R4 = X(I0+3) + X(I0+7)
+            R8 = X(I0+3) - X(I0+7)
+            T1 = R1 - R3
+            R1 = R1 + R3
+            R3 = R2 - R4
+            R2 = R2 + R4
+            X(I0)   = R1 + R2
+            X(I0+1) = R1 - R2
+C
+            R1 = Y(I0)   + Y(I0+4)
+            S5 = Y(I0)   - Y(I0+4)
+            R2 = Y(I0+1) + Y(I0+5)
+            S6 = Y(I0+1) - Y(I0+5)
+            S3 = Y(I0+2) + Y(I0+6)
+            S7 = Y(I0+2) - Y(I0+6)
+            R4 = Y(I0+3) + Y(I0+7)
+            S8 = Y(I0+3) - Y(I0+7)
+            T2 = R1 - S3
+            R1 = R1 + S3
+            S3 = R2 - R4
+            R2 = R2 + R4
+            Y(I0)   = R1 + R2
+            Y(I0+1) = R1 - R2
+            X(I0+2) = T1 + S3
+            X(I0+3) = T1 - S3
+            Y(I0+2) = T2 - R3
+            Y(I0+3) = T2 + R3
+C
+            R1 = (R6 - R8)*C81
+            R6 = (R6 + R8)*C81
+            R2 = (S6 - S8)*C81
+            S6 = (S6 + S8)*C81
+C
+            T1 = R5 - R1
+            R5 = R5 + R1
+            R8 = R7 - R6
+            R7 = R7 + R6
+            T2 = S5 - R2
+            S5 = S5 + R2
+            S8 = S7 - S6
+            S7 = S7 + S6
+            X(I0+4) = R5 + S7
+            X(I0+7) = R5 - S7
+            X(I0+5) = T1 + S8
+            X(I0+6) = T1 - S8
+            Y(I0+4) = S5 - R7
+            Y(I0+7) = S5 + R7
+            Y(I0+5) = T2 - R8
+            Y(I0+6) = T2 + R8
+  65    CONTINUE
+            IS = 2*ID - 7
+            ID = 4*ID
+        IF (IS.LT.N) GOTO 55
+C
+C------------BIT REVERSE COUNTER-----------------
+C
+  100   J = 1
+        N1 = N - 1
+        DO 104 I=1, N1
+            IF (I.GE.J) GOTO 101
+            XT = X(J)
+            X(J) = X(I)
+            X(I) = XT
+            XT   = Y(J)
+            Y(J) = Y(I)
+            Y(I) = XT
+  101       K = N/2
+  102       IF (K.GE.J) GOTO 103
+                J = J - K
+                K = K/2
+                GOTO 102
+  103       J = J + K
+  104   CONTINUE
+        RETURN
+        END
+</code>
+    </section>
+<section id="uid1899000243526">
+      <title>Prime Factor FFT Algorithm</title>
+      <para id="id2346236462255549">Below is the Fortran code for a Prime-Factor Algorithm (PFA) FFT
+allowing factors of the length of 2, 3, 4, 5, and 7. It is
+followed by an unscrambler.</para>
+      <code id="id16233031" display="block">C---------------------------------------------------
+C
+C   A PRIME FACTOR FFT PROGRAM WITH GENERAL MODULES
+C   COMPLEX INPUT DATA IN ARRAYS  X AND Y
+C   COMPLEX OUTPUT IN  A AND B
+C   LENGTH  N  WITH  M  FACTORS IN ARRAY  NI
+C     N = NI(1)*NI(2)* ... *NI(M)
+C   UNSCRAMBLING CONSTANT  UNSC
+C     UNSC = N/NI(1) + N/NI(2) +...+ N/NI(M), MOD N
+C      C. S. BURRUS, RICE UNIVERSITY, JAN 1987
+C
+C--------------------------------------------------
+C
+    SUBROUTINE PFA(X,Y,N,M,NI,A,B,UNSC)
+C
+    INTEGER  NI(4), I(16), UNSC
+        REAL X(1), Y(1), A(1), B(1)
+C
+    DATA  C31, C32  / -0.86602540,-1.50000000 /
+    DATA  C51, C52  /  0.95105652,-1.53884180 /
+    DATA  C53, C54  / -0.36327126, 0.55901699 /
+    DATA  C55       / -1.25  /
+    DATA  C71, C72  / -1.16666667,-0.79015647 /
+    DATA  C73, C74  /  0.055854267, 0.7343022 /
+    DATA  C75, C76  /  0.44095855,-0.34087293 /
+    DATA  C77, C78  /  0.53396936, 0.87484229 /
+C
+C-----------------NESTED LOOPS----------------------
+C
+    DO 10 K=1, M
+          N1 = NI(K)
+      N2 = N/N1
+      DO 15 J=1, N, N1
+             IT   = J
+             DO 30 L=1, N1
+                I(L) = IT
+            A(L) = X(IT)
+            B(L) = Y(IT)
+                IT = IT + N2
+                IF (IT.GT.N)  IT = IT - N
+   30        CONTINUE
+             GOTO (20,102,103,104,105,20,107), N1
+C
+C----------------WFTA N=2--------------------------------
+C
+  102   R1    = A(1)
+    A(1)  = R1 + A(2)
+    A(2)  = R1 - A(2)
+C
+    R1   = B(1)
+    B(1) = R1 + B(2)
+    B(2) = R1 - B(2)
+C
+    GOTO 20
+C----------------WFTA N=3--------------------------------
+C
+  103   R2 = (A(2) - A(3)) * C31
+    R1 =  A(2) + A(3)
+    A(1)= A(1) + R1
+    R1  = A(1) + R1 * C32
+C
+    S2 = (B(2) - B(3)) * C31
+    S1 =  B(2) + B(3)
+    B(1)= B(1) + S1
+    S1  = B(1) + S1 * C32
+C
+    A(2) = R1 - S2
+    A(3) = R1 + S2
+    B(2) = S1 + R2
+    B(3) = S1 - R2
+C
+    GOTO 20
+C
+C----------------WFTA N=4---------------------------------
+C
+  104   R1 = A(1) + A(3)
+    T1 = A(1) - A(3)
+    R2 = A(2) + A(4)
+    A(1) = R1 + R2
+    A(3) = R1 - R2
+C
+    R1 = B(1) + B(3)
+    T2 = B(1) - B(3)
+    R2 = B(2) + B(4)
+    B(1) = R1 + R2
+    B(3) = R1 - R2
+C
+    R1 = A(2) - A(4)
+    R2 = B(2) - B(4)
+C
+    A(2) = T1 + R2
+    A(4) = T1 - R2
+    B(2) = T2 - R1
+    B(4) = T2 + R1
+C
+    GOTO 20
+C
+C----------------WFTA N=5--------------------------------
+C
+  105   R1 = A(2) + A(5)
+    R4 = A(2) - A(5)
+    R3 = A(3) + A(4)
+    R2 = A(3) - A(4)
+C
+    T = (R1 - R3) * C54
+    R1 = R1 + R3
+    A(1) = A(1) + R1
+    R1   = A(1) + R1 * C55
+C
+    R3 = R1 - T
+    R1 = R1 + T
+C
+    T = (R4 + R2) * C51
+    R4 =  T + R4 * C52
+    R2 =  T + R2 * C53
+C
+    S1 = B(2) + B(5)
+    S4 = B(2) - B(5)
+    S3 = B(3) + B(4)
+    S2 = B(3) - B(4)
+C
+    T = (S1 - S3) * C54
+    S1 = S1 + S3
+    B(1) = B(1) + S1
+    S1   = B(1) + S1 * C55
+C
+    S3 =  S1 - T
+    S1 =  S1 + T
+C
+    T = (S4 + S2) * C51
+    S4 =  T + S4 * C52
+    S2 =  T + S2 * C53
+C
+    A(2) = R1 + S2
+    A(5) = R1 - S2
+    A(3) = R3 - S4
+    A(4) = R3 + S4
+C
+    B(2) = S1 - R2
+    B(5) = S1 + R2
+    B(3) = S3 + R4
+    B(4) = S3 - R4
+C
+    GOTO 20
+C-----------------WFTA N=7--------------------------
+C
+  107   R1 = A(2) + A(7)
+    R6 = A(2) - A(7)
+    S1 = B(2) + B(7)
+    S6 = B(2) - B(7)
+    R2 = A(3) + A(6)
+    R5 = A(3) - A(6)
+    S2 = B(3) + B(6)
+    S5 = B(3) - B(6)
+    R3 = A(4) + A(5)
+    R4 = A(4) - A(5)
+    S3 = B(4) + B(5)
+    S4 = B(4) - B(5)
+C
+    T3 = (R1 - R2) * C74
+    T  = (R1 - R3) * C72
+    R1 = R1 + R2 + R3
+    A(1) = A(1) + R1
+    R1   = A(1) + R1 * C71
+    R2 =(R3 - R2) * C73
+    R3 = R1 - T + R2
+    R2 = R1 - R2 - T3
+    R1 = R1 + T + T3
+    T = (R6 - R5) * C78
+    T3 =(R6 + R4) * C76
+    R6 =(R6 + R5 - R4) * C75
+    R5 =(R5 + R4) * C77
+    R4 = R6 - T3 + R5
+    R5 = R6 - R5 - T
+    R6 = R6 + T3 + T
+C
+    T3 = (S1 - S2) * C74
+    T  = (S1 - S3) * C72
+    S1 =  S1 + S2 + S3
+    B(1) = B(1) + S1
+    S1   = B(1) + S1 * C71
+    S2 =(S3 - S2) * C73
+    S3 = S1 - T  + S2
+    S2 = S1 - S2 - T3
+    S1 = S1 + T  + T3
+    T  = (S6 - S5) * C78
+    T3 = (S6 + S4) * C76
+    S6 = (S6 + S5 - S4) * C75
+    S5 = (S5 + S4) * C77
+    S4 = S6 - T3 + S5
+    S5 = S6 - S5 - T
+    S6 = S6 + T3 + T
+C
+    A(2) = R3 + S4
+    A(7) = R3 - S4
+    A(3) = R1 + S6
+    A(6) = R1 - S6
+    A(4) = R2 - S5
+    A(5) = R2 + S5
+    B(4) = S2 + R5
+    B(5) = S2 - R5
+    B(2) = S3 - R4
+    B(7) = S3 + R4
+    B(3) = S1 - R6
+    B(6) = S1 + R6
+C
+   20        IT   = J
+             DO 31 L=1, N1
+                I(L) = IT
+            X(IT) = A(L)
+            Y(IT) = B(L)
+                IT = IT + N2
+                IF (IT.GT.N)  IT = IT - N
+   31        CONTINUE
+   15     CONTINUE
+   10   CONTINUE
+C
+C-----------------UNSCRAMBLING----------------------
+C
+    L = 1
+    DO 2 K=1, N
+       A(K) = X(L)
+       B(K) = Y(L)
+           L = L + UNSC
+           IF (L.GT.N)  L = L - N
+    2   CONTINUE
+    RETURN
+    END
+C
+</code>
+    </section>
+<section id="uid10987658996435345">
+      <title>In Place, In Order Prime Factor FFT Algorithm</title>
+      <para id="id225554236329">Below is the Fortran code for a Prime-Factor Algorithm (PFA) FFT
+allowing factors of the length of 2, 3, 4, 5, 7, 8, 9, and 16. It is both
+in-place and in-order, so requires no unscrambler.</para>
+      <code id="id16233153" display="block">C
+C   A PRIME FACTOR FFT PROGRAM
+C   IN-PLACE AND IN-ORDER
+C   COMPLEX INPUT DATA IN ARRAYS  X AND Y
+C   LENGTH  N  WITH  M  FACTORS IN ARRAY  NI
+C       N = NI(1)*NI(2)*...*NI(M)
+C   REDUCED TEMP STORAGE IN SHORT WFTA MODULES
+C   Has modules 2,3,4,5,7,8,9,16
+C   PROGRAM BY  C. S. BURRUS,  RICE UNIVERSITY
+C                  SEPT 1983
+C----------------------------------------------------
+C
+    SUBROUTINE PFA(X,Y,N,M,NI)
+    INTEGER  NI(4), I(16), IP(16), LP(16)
+        REAL X(1), Y(1)
+    DATA  C31, C32  / -0.86602540,-1.50000000 /
+    DATA  C51, C52  /  0.95105652,-1.53884180 /
+    DATA  C53, C54  / -0.36327126, 0.55901699 /
+    DATA  C55       / -1.25  /
+    DATA  C71, C72  / -1.16666667,-0.79015647 /
+    DATA  C73, C74  /  0.055854267, 0.7343022 /
+    DATA  C75, C76  /  0.44095855,-0.34087293 /
+    DATA  C77, C78  /  0.53396936, 0.87484229 /
+    DATA  C81       /  0.70710678 /
+    DATA  C95       / -0.50000000 /
+    DATA  C92, C93  /  0.93969262, -0.17364818 /
+    DATA  C94, C96  /  0.76604444, -0.34202014 /
+    DATA  C97, C98  / -0.98480775, -0.64278761 /
+    DATA  C162,C163 /  0.38268343,  1.30656297 /
+    DATA  C164,C165 /  0.54119610,  0.92387953 /
+C
+C-----------------NESTED LOOPS----------------------------------
+C
+    DO 10 K=1, M
+           N1 = NI(K)
+       N2 = N/N1
+       L  = 1
+       N3 = N2 - N1*(N2/N1)
+       DO 15 J = 1, N1
+          LP(J) = L
+              L = L + N3
+          IF (L.GT.N1) L = L - N1
+   15      CONTINUE
+C
+       DO 20 J=1, N, N1
+          IT   = J
+          DO 30 L=1, N1
+             I(L) = IT
+             IP(LP(L)) = IT
+             IT = IT + N2
+             IF (IT.GT.N)  IT = IT - N
+   30         CONTINUE
+          GOTO (20,102,103,104,105,20,107,108,109,
+     +              20,20,20,20,20,20,116),N1
+ 
+C----------------WFTA N=2--------------------------------
+C
+  102   R1       = X(I(1))
+    X(I(1))  = R1 + X(I(2))
+    X(I(2))  = R1 - X(I(2))
+C
+    R1       = Y(I(1))
+    Y(IP(1)) = R1 + Y(I(2))
+    Y(IP(2)) = R1 - Y(I(2))
+C
+    GOTO 20
+C
+C----------------WFTA N=3--------------------------------
+C
+  103   R2 = (X(I(2)) - X(I(3))) * C31
+    R1 =  X(I(2)) + X(I(3))
+    X(I(1))= X(I(1)) + R1
+    R1     = X(I(1)) + R1 * C32
+C
+    S2 = (Y(I(2)) - Y(I(3))) * C31
+    S1 =  Y(I(2)) + Y(I(3))
+    Y(I(1))= Y(I(1)) + S1
+    S1     = Y(I(1)) + S1 * C32
+C
+    X(IP(2)) = R1 - S2
+    X(IP(3)) = R1 + S2
+    Y(IP(2)) = S1 + R2
+    Y(IP(3)) = S1 - R2
+C
+    GOTO 20
+C
+C----------------WFTA N=4---------------------------------
+C
+  104   R1 = X(I(1)) + X(I(3))
+    T1 = X(I(1)) - X(I(3))
+    R2 = X(I(2)) + X(I(4))
+    X(IP(1)) = R1 + R2
+    X(IP(3)) = R1 - R2
+C
+    R1 = Y(I(1)) + Y(I(3))
+    T2 = Y(I(1)) - Y(I(3))
+    R2 = Y(I(2)) + Y(I(4))
+    Y(IP(1)) = R1 + R2
+    Y(IP(3)) = R1 - R2
+C
+    R1 = X(I(2)) - X(I(4))
+    R2 = Y(I(2)) - Y(I(4))
+C
+    X(IP(2)) = T1 + R2
+    X(IP(4)) = T1 - R2
+    Y(IP(2)) = T2 - R1
+    Y(IP(4)) = T2 + R1
+C
+    GOTO 20
+ 
+C----------------WFTA N=5--------------------------------
+C
+  105   R1 = X(I(2)) + X(I(5))
+    R4 = X(I(2)) - X(I(5))
+    R3 = X(I(3)) + X(I(4))
+    R2 = X(I(3)) - X(I(4))
+C
+    T = (R1 - R3) * C54
+    R1 = R1 + R3
+    X(I(1)) = X(I(1)) + R1
+    R1      = X(I(1)) + R1 * C55
+C
+    R3 = R1 - T
+    R1 = R1 + T
+C
+    T = (R4 + R2) * C51
+    R4 =  T + R4 * C52
+    R2 =  T + R2 * C53
+C
+    S1 = Y(I(2)) + Y(I(5))
+    S4 = Y(I(2)) - Y(I(5))
+    S3 = Y(I(3)) + Y(I(4))
+    S2 = Y(I(3)) - Y(I(4))
+C
+    T = (S1 - S3) * C54
+    S1 = S1 + S3
+    Y(I(1)) = Y(I(1)) + S1
+    S1      = Y(I(1)) + S1 * C55
+C
+    S3 =  S1 - T
+    S1 =  S1 + T
+C
+    T = (S4 + S2) * C51
+    S4 =  T + S4 * C52
+    S2 =  T + S2 * C53
+C
+    X(IP(2)) = R1 + S2
+    X(IP(5)) = R1 - S2
+    X(IP(3)) = R3 - S4
+    X(IP(4)) = R3 + S4
+C
+    Y(IP(2)) = S1 - R2
+    Y(IP(5)) = S1 + R2
+    Y(IP(3)) = S3 + R4
+    Y(IP(4)) = S3 - R4
+C
+    GOTO 20
+ 
+C-----------------WFTA N=7--------------------------
+C
+  107   R1 = X(I(2)) + X(I(7))
+    R6 = X(I(2)) - X(I(7))
+    S1 = Y(I(2)) + Y(I(7))
+    S6 = Y(I(2)) - Y(I(7))
+    R2 = X(I(3)) + X(I(6))
+    R5 = X(I(3)) - X(I(6))
+    S2 = Y(I(3)) + Y(I(6))
+    S5 = Y(I(3)) - Y(I(6))
+    R3 = X(I(4)) + X(I(5))
+    R4 = X(I(4)) - X(I(5))
+    S3 = Y(I(4)) + Y(I(5))
+    S4 = Y(I(4)) - Y(I(5))
+C
+    T3 = (R1 - R2) * C74
+    T  = (R1 - R3) * C72
+    R1 = R1 + R2 + R3
+    X(I(1)) = X(I(1)) + R1
+    R1      = X(I(1)) + R1 * C71
+    R2 =(R3 - R2) * C73
+    R3 = R1 - T + R2
+    R2 = R1 - R2 - T3
+    R1 = R1 + T + T3
+    T = (R6 - R5) * C78
+    T3 =(R6 + R4) * C76
+    R6 =(R6 + R5 - R4) * C75
+    R5 =(R5 + R4) * C77
+    R4 = R6 - T3 + R5
+    R5 = R6 - R5 - T
+    R6 = R6 + T3 + T
+C
+    T3 = (S1 - S2) * C74
+    T  = (S1 - S3) * C72
+    S1 =  S1 + S2 + S3
+    Y(I(1)) = Y(I(1)) + S1
+    S1      = Y(I(1)) + S1 * C71
+    S2 =(S3 - S2) * C73
+    S3 = S1 - T  + S2
+    S2 = S1 - S2 - T3
+    S1 = S1 + T  + T3
+    T  = (S6 - S5) * C78
+    T3 = (S6 + S4) * C76
+    S6 = (S6 + S5 - S4) * C75
+    S5 = (S5 + S4) * C77
+    S4 = S6 - T3 + S5
+    S5 = S6 - S5 - T
+    S6 = S6 + T3 + T
+C
+    X(IP(2)) = R3 + S4
+    X(IP(7)) = R3 - S4
+    X(IP(3)) = R1 + S6
+    X(IP(6)) = R1 - S6
+    X(IP(4)) = R2 - S5
+    X(IP(5)) = R2 + S5
+    Y(IP(4)) = S2 + R5
+    Y(IP(5)) = S2 - R5
+    Y(IP(2)) = S3 - R4
+    Y(IP(7)) = S3 + R4
+    Y(IP(3)) = S1 - R6
+    Y(IP(6)) = S1 + R6
+C
+    GOTO 20
+ 
+C-----------------WFTA N=8--------------------------
+C
+  108   R1 = X(I(1)) + X(I(5))
+    R2 = X(I(1)) - X(I(5))
+    R3 = X(I(2)) + X(I(8))
+    R4 = X(I(2)) - X(I(8))
+    R5 = X(I(3)) + X(I(7))
+    R6 = X(I(3)) - X(I(7))
+    R7 = X(I(4)) + X(I(6))
+    R8 = X(I(4)) - X(I(6))
+    T1 = R1 + R5
+    T2 = R1 - R5
+    T3 = R3 + R7
+    R3 =(R3 - R7) * C81
+    X(IP(1)) = T1 + T3
+    X(IP(5)) = T1 - T3
+    T1 = R2 + R3
+    T3 = R2 - R3
+    S1 = R4 - R8
+    R4 =(R4 + R8) * C81
+    S2 = R4 + R6
+    S3 = R4 - R6
+    R1 = Y(I(1)) + Y(I(5))
+    R2 = Y(I(1)) - Y(I(5))
+    R3 = Y(I(2)) + Y(I(8))
+    R4 = Y(I(2)) - Y(I(8))
+    R5 = Y(I(3)) + Y(I(7))
+    R6 = Y(I(3)) - Y(I(7))
+    R7 = Y(I(4)) + Y(I(6))
+    R8 = Y(I(4)) - Y(I(6))
+    T4 = R1 + R5
+    R1 = R1 - R5
+    R5 = R3 + R7
+    R3 =(R3 - R7) * C81
+    Y(IP(1)) = T4 + R5
+    Y(IP(5)) = T4 - R5
+    R5 = R2 + R3
+    R2 = R2 - R3
+    R3 = R4 - R8
+    R4 =(R4 + R8) * C81
+    R7 = R4 + R6
+    R4 = R4 - R6
+    X(IP(2)) = T1 + R7
+    X(IP(8)) = T1 - R7
+    X(IP(3)) = T2 + R3
+    X(IP(7)) = T2 - R3
+    X(IP(4)) = T3 + R4
+    X(IP(6)) = T3 - R4
+    Y(IP(2)) = R5 - S2
+    Y(IP(8)) = R5 + S2
+    Y(IP(3)) = R1 - S1
+    Y(IP(7)) = R1 + S1
+    Y(IP(4)) = R2 - S3
+    Y(IP(6)) = R2 + S3
+C
+    GOTO 20
+ 
+C-----------------WFTA N=9-----------------------
+C
+  109   R1 = X(I(2)) + X(I(9))
+    R2 = X(I(2)) - X(I(9))
+    R3 = X(I(3)) + X(I(8))
+    R4 = X(I(3)) - X(I(8))
+    R5 = X(I(4)) + X(I(7))
+    T8 =(X(I(4)) - X(I(7))) * C31
+    R7 = X(I(5)) + X(I(6))
+    R8 = X(I(5)) - X(I(6))
+    T0 = X(I(1)) + R5
+    T7 = X(I(1)) + R5 * C95
+    R5 = R1 + R3 + R7
+    X(I(1)) = T0 + R5
+    T5 = T0 + R5 * C95
+    T3 = (R3 - R7) * C92
+    R7 = (R1 - R7) * C93
+    R3 = (R1 - R3) * C94
+    T1 = T7 + T3 + R3
+    T3 = T7 - T3 - R7
+    T7 = T7 + R7 - R3
+    T6 = (R2 - R4 + R8) * C31
+    T4 = (R4 + R8) * C96
+    R8 = (R2 - R8) * C97
+    R2 = (R2 + R4) * C98
+    T2 = T8 + T4 + R2
+    T4 = T8 - T4 - R8
+    T8 = T8 + R8 - R2
+C
+    R1 = Y(I(2)) + Y(I(9))
+    R2 = Y(I(2)) - Y(I(9))
+    R3 = Y(I(3)) + Y(I(8))
+    R4 = Y(I(3)) - Y(I(8))
+    R5 = Y(I(4)) + Y(I(7))
+    R6 =(Y(I(4)) - Y(I(7))) * C31
+    R7 = Y(I(5)) + Y(I(6))
+    R8 = Y(I(5)) - Y(I(6))
+    T0 = Y(I(1)) + R5
+    T9 = Y(I(1)) + R5 * C95
+    R5 = R1 + R3 + R7
+    Y(I(1)) = T0 + R5
+    R5 = T0 + R5 * C95
+    T0 = (R3 - R7) * C92
+    R7 = (R1 - R7) * C93
+    R3 = (R1 - R3) * C94
+    R1 = T9 + T0 + R3
+    T0 = T9 - T0 - R7
+    R7 = T9 + R7 - R3
+    R9 = (R2 - R4 + R8) * C31
+    R3 = (R4 + R8) * C96
+    R8 = (R2 - R8) * C97
+    R4 = (R2 + R4) * C98
+    R2 = R6 + R3 + R4
+    R3 = R6 - R8 - R3
+    R8 = R6 + R8 - R4
+C
+    X(IP(2)) = T1 - R2
+    X(IP(9)) = T1 + R2
+    Y(IP(2)) = R1 + T2
+    Y(IP(9)) = R1 - T2
+    X(IP(3)) = T3 + R3
+    X(IP(8)) = T3 - R3
+    Y(IP(3)) = T0 - T4
+    Y(IP(8)) = T0 + T4
+    X(IP(4)) = T5 - R9
+    X(IP(7)) = T5 + R9
+    Y(IP(4)) = R5 + T6
+    Y(IP(7)) = R5 - T6
+    X(IP(5)) = T7 - R8
+    X(IP(6)) = T7 + R8
+    Y(IP(5)) = R7 + T8
+    Y(IP(6)) = R7 - T8
+C
+    GOTO 20
+ 
+C-----------------WFTA N=16------------------------
+C
+  116   R1 = X(I(1)) + X(I(9))
+    R2 = X(I(1)) - X(I(9))
+    R3 = X(I(2)) + X(I(10))
+    R4 = X(I(2)) - X(I(10))
+    R5 = X(I(3)) + X(I(11))
+    R6 = X(I(3)) - X(I(11))
+    R7 = X(I(4)) + X(I(12))
+    R8 = X(I(4)) - X(I(12))
+    R9 = X(I(5)) + X(I(13))
+    R10= X(I(5)) - X(I(13))
+    R11 = X(I(6)) + X(I(14))
+    R12 = X(I(6)) - X(I(14))
+    R13 = X(I(7)) + X(I(15))
+    R14 = X(I(7)) - X(I(15))
+    R15 = X(I(8)) + X(I(16))
+    R16 = X(I(8)) - X(I(16))
+    T1 = R1 + R9
+    T2 = R1 - R9
+    T3 = R3 + R11
+    T4 = R3 - R11
+    T5 = R5 + R13
+    T6 = R5 - R13
+    T7 = R7 + R15
+    T8 = R7 - R15
+    R1 = T1 + T5
+    R3 = T1 - T5
+    R5 = T3 + T7
+    R7 = T3 - T7
+    X(IP( 1)) = R1 + R5
+    X(IP( 9)) = R1 - R5
+    T1 = C81 * (T4 + T8)
+    T5 = C81 * (T4 - T8)
+    R9 = T2 + T5
+    R11= T2 - T5
+    R13 = T6 + T1
+    R15 = T6 - T1
+    T1 = R4 + R16
+    T2 = R4 - R16
+    T3 = C81 * (R6 + R14)
+    T4 = C81 * (R6 - R14)
+    T5 = R8 + R12
+    T6 = R8 - R12
+    T7 = C162 * (T2 - T6)
+    T2 = C163 * T2 - T7
+    T6 = C164 * T6 - T7
+    T7 = R2 + T4
+    T8 = R2 - T4
+    R2 = T7 + T2
+    R4 = T7 - T2
+    R6 = T8 + T6
+    R8 = T8 - T6
+    T7 = C165 * (T1 + T5)
+    T2 = T7 - C164 * T1
+    T4 = T7 - C163 * T5
+    T6 = R10 + T3
+    T8 = R10 - T3
+    R10 = T6 + T2
+    R12 = T6 - T2
+    R14 = T8 + T4
+    R16 = T8 - T4
+    R1 = Y(I(1)) + Y(I(9))
+    S2 = Y(I(1)) - Y(I(9))
+    S3 = Y(I(2)) + Y(I(10))
+    S4 = Y(I(2)) - Y(I(10))
+    R5 = Y(I(3)) + Y(I(11))
+    S6 = Y(I(3)) - Y(I(11))
+    S7 = Y(I(4)) + Y(I(12))
+    S8 = Y(I(4)) - Y(I(12))
+    S9 = Y(I(5)) + Y(I(13))
+    S10= Y(I(5)) - Y(I(13))
+    S11 = Y(I(6)) + Y(I(14))
+    S12 = Y(I(6)) - Y(I(14))
+    S13 = Y(I(7)) + Y(I(15))
+    S14 = Y(I(7)) - Y(I(15))
+    S15 = Y(I(8)) + Y(I(16))
+    S16 = Y(I(8)) - Y(I(16))
+    T1 = R1 + S9
+    T2 = R1 - S9
+    T3 = S3 + S11
+    T4 = S3 - S11
+    T5 = R5 + S13
+    T6 = R5 - S13
+    T7 = S7 + S15
+    T8 = S7 - S15
+    R1 = T1 + T5
+    S3 = T1 - T5
+    R5 = T3 + T7
+    S7 = T3 - T7
+    Y(IP( 1)) = R1 + R5
+    Y(IP( 9)) = R1 - R5
+    X(IP( 5)) = R3 + S7
+    X(IP(13)) = R3 - S7
+    Y(IP( 5)) = S3 - R7
+    Y(IP(13)) = S3 + R7
+    T1 = C81 * (T4 + T8)
+    T5 = C81 * (T4 - T8)
+    S9 = T2 + T5
+    S11= T2 - T5
+    S13 = T6 + T1
+    S15 = T6 - T1
+    T1 = S4 + S16
+    T2 = S4 - S16
+    T3 = C81 * (S6 + S14)
+    T4 = C81 * (S6 - S14)
+    T5 = S8 + S12
+    T6 = S8 - S12
+    T7 = C162 * (T2 - T6)
+    T2 = C163 * T2 - T7
+    T6 = C164 * T6 - T7
+    T7 = S2 + T4
+    T8 = S2 - T4
+    S2 = T7 + T2
+    S4 = T7 - T2
+    S6 = T8 + T6
+    S8 = T8 - T6
+    T7 = C165 * (T1 + T5)
+    T2 = T7 - C164 * T1
+    T4 = T7 - C163 * T5
+    T6 = S10 + T3
+    T8 = S10 - T3
+    S10 = T6 + T2
+    S12 = T6 - T2
+    S14 = T8 + T4
+    S16 = T8 - T4
+    X(IP( 2)) = R2 + S10
+    X(IP(16)) = R2 - S10
+    Y(IP( 2)) = S2 - R10
+    Y(IP(16)) = S2 + R10
+    X(IP( 3)) = R9 + S13
+    X(IP(15)) = R9 - S13
+    Y(IP( 3)) = S9 - R13
+    Y(IP(15)) = S9 + R13
+    X(IP( 4)) = R8 - S16
+    X(IP(14)) = R8 + S16
+    Y(IP( 4)) = S8 + R16
+    Y(IP(14)) = S8 - R16
+    X(IP( 6)) = R6 + S14
+    X(IP(12)) = R6 - S14
+    Y(IP( 6)) = S6 - R14
+    Y(IP(12)) = S6 + R14
+    X(IP( 7)) = R11 - S15
+    X(IP(11)) = R11 + S15
+    Y(IP( 7)) = S11 + R15
+    Y(IP(11)) = S11 - R15
+    X(IP( 8)) = R4 - S12
+    X(IP(10)) = R4 + S12
+    Y(IP( 8)) = S4 + R12
+    Y(IP(10)) = S4 - R12
+C
+    GOTO 20
+C
+   20      CONTINUE
+   10   CONTINUE
+    RETURN
+    END
+</code>
+    </section>
+
+
+
+
+
+</content>
+  <bib:file>
+    <bib:entry id="bid0">
+      <bib:book>
+<!--required fields-->
+        <bib:author>Burrus, C. S. and Parks, T. W.</bib:author>
+        <bib:title>DFT/FFT and Convolution Algorithms</bib:title>
+        <bib:publisher>John Wiley &amp; Sons</bib:publisher>
+        <bib:year>1985</bib:year>
+<!--optional fields-->
+        <bib:volume/>
+        <bib:series/>
+        <bib:address>New York</bib:address>
+        <bib:edition/>
+        <bib:month/>
+        <bib:note/>
+      </bib:book>
+    </bib:entry>
+  </bib:file>
+  
+</document>

@@ -1,0 +1,93 @@
+<document xmlns="http://cnx.rice.edu/cnxml" xmlns:m="http://www.w3.org/1998/Math/MathML" xmlns:md="http://cnx.rice.edu/mdml">
+  <title>Appendix 4:  Programs for Short FFTs</title>
+  <metadata>
+  <md:content-id>m17646</md:content-id><md:title>Appendix 4:  Programs for Short FFTs</md:title>
+  <md:abstract/>
+  <md:uuid>78bef672-dc29-4fb8-86e5-6a21ad72ea0c</md:uuid>
+</metadata>
+
+<content>
+    <para id="element-982734">This appendix will discuss efficient short FFT programs that can be used in both the <link document="m16334">Cooley-Tukey</link> and the <link document="m16335">Prime Factor FFT algorithms</link>. Links and references are given to Fortran listings that can be used "as is" or put into the indexed loops of existing programs to give greater efficiency and/or a greater variety of allowed lengths. Special programs have been written for lengths: 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mi>2, 3, 4, 5, 7, 8, 9, 11, 13, 16, 17, 19, 25,</m:mi>
+</m:math> etc.
+ 
+</para><para id="element-0">In the early days of the FFT, multiplication was done in software and was, therefore, much slower than an addition. With modem hardware, a floating point multiplication can be done in one clock cycle of the computer, microprocessor, or DSP chip, requiring the same time as an addition. Indeed, in some computers and many DSP chips, both a multiplication and an addition (or accumulation) can be done in one cycle while the indexing and memory access is done in parallel. Most of the algorithms described here are not hardware architecture specific but are designed to minimize both multiplications and additions.
+ 
+</para><para id="element-129">The most basic and often used length FFT (or DFT) is for 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>2</m:mn>
+</m:math>. In the Cooley Tukey FFT, it is called a "butterfly" and its reason for fame is requiring no multiplications at all, only one complex addition and one complex subtraction and needing only one complex temporary storage location. This is illustrated in <link document="m16335" target-id="uid10">Figure 1: The Prime Factor and Winograd Transform Algorithms</link> and code is shown in <link document="m16335" target-id="uid20">Figure 2: The Prime Factor and Winograd Transform Algorithms</link>. The second most used length is <m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>4</m:mn>
+</m:math> because it is the only other short length requiring no multiplications and a minimum of additions. All other short FFT require some multiplication but for powers of two, 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>8</m:mn>
+</m:math> and 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>16</m:mn>
+</m:math> require few enough to be worth special coding for some situations.
+ 
+</para><para id="element-762">Code for other short lengths such as the primes 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>3</m:mn>
+<m:mi>, 5, 7, 11, 13, 17, and 19</m:mi>
+</m:math> and the composites 
+<m:math>
+<m:mi>N</m:mi>
+<m:mo>=</m:mo>
+<m:mn>9</m:mn>
+<m:mspace width="10pt"/> 
+<m:mtext>and</m:mtext>
+<m:mspace width="10pt"/>
+<m:mn> 25</m:mn>
+</m:math> are included in the programs for the prime factor algorithm or the WFTA. They are derived using the theory in Chapters 5, 6, and 9. They can also be found in references ... and
+ 
+</para><para id="element-984">If these short FFTs are used as modules in the basic prime factor algorithm (PFA), then the straight forward development used for the modules in Figure 17.12 are used.  However if the more complicated indexing use to achieve in-order, in-place calculation used in {xxxxx} require different code.
+ </para><para id="element-654">For each of the indicated lengths, the computer code is given in a Connexions module. </para><para id="element-248">They are not in the collection <link document="col10550">Fast Fourier Transforms</link> as the printed version would be too long. However, one can link to them on-line from the following buttons:
+<code id="id44703815" display="block"><link document="m17625">N=2</link>
+<link document="m17626">N=3</link>
+<link document="m17627">N=4</link>
+<link document="m17628">N=5</link>
+<link document="m17629">N=7</link>
+N= 8
+N= 9
+N= l1
+N= 13
+N= 16
+N= 17
+N= 19
+N= 25 
+</code> 
+
+
+Versions for the in-place, in-order prime factor algorithm {pfa} can be obtained from:
+ <code id="id44696171" display="block"><link document="m17631">N=2</link>
+<link document="m17632">N=3</link>
+<link document="m17633">N=4</link>
+<link document="m17634">N=5</link>
+<link document="m17635">N=7</link>
+<link document="m17636">N=8</link>
+<link document="m17637">N=9</link>
+<link document="m17377">N=l1</link>
+<link document="m17378">N=13</link>
+<link document="m17382">N=16</link>
+<link document="m17380">N=17</link>
+<link document="m17381">N=19</link>
+<link document="m17383">N=25</link>
+ </code>
+A technical report that describes the length 11, 13, 17, and 19 is in {report 8105} and another technical report that describes a program that will automatically generate a prime length FFT and its flow graph si in {report xxx}.</para> 
+  </content>
+  
+</document>
