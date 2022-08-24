@@ -1,115 +1,32 @@
-<col:collection xmlns="http://cnx.rice.edu/collxml" xmlns:col="http://cnx.rice.edu/collxml" xml:lang="en" type="Book">
+<?xml version="1.0"?>
+<col:collection xmlns="http://cnx.rice.edu/collxml" xmlns:col="http://cnx.rice.edu/collxml" xml:lang="en" type="Book" authors="Daniel Williamson">
   <metadata xmlns:md="http://cnx.rice.edu/mdml" mdml-version="0.5">
-  <md:content-id>col10550</md:content-id>
-  <md:title>Fast Fourier Transforms</md:title>
-  
-  
-  <md:license url="http://creativecommons.org/licenses/by/3.0/"/>
-  <md:language>en</md:language>
-
-  
-
-  
-  
-  <md:uuid>82e6ba6f-b828-42ef-9db1-8de4b448b869</md:uuid>
-<md:slug>fast-fourier-transforms</md:slug>
-</metadata>
-
+    <md:content-id>col10550</md:content-id>
+    <md:title>Fast Fourier Transforms</md:title>
+    <md:license url="http://creativecommons.org/licenses/by/3.0/"/>
+    <md:language>en</md:language>
+    <md:uuid>82e6ba6f-b828-42ef-9db1-8de4b448b869</md:uuid>
+    <md:slug>fast-fourier-transforms</md:slug>
+  </metadata>
   <col:content>
-    
-      <col:module document="m16324"/>
-        
-      
-    
-    
-      <col:module document="m16325"/>
-        
-      
-    
-    
-      <col:module document="m16326"/>
-        
-      
-    
-    
-      <col:module document="m16327"/>
-        
-      
-    
-    
-      <col:module document="m16328"/>
-        
-      
-    
-    
-      <col:module document="m16330"/>
-        
-      
-    
-    
-      <col:module document="m16333"/>
-        
-      
-    
-    
-      <col:module document="m16331"/>
-        
-      
-    
-    
-      <col:module document="m16334"/>
-        
-      
-    
-    
-      <col:module document="m16335"/>
-        
-      
-    
-    
-      <col:module document="m16336"/>
-        
-      
-    
-    
-      <col:module document="m16338"/>
-        
-      
-    
-    
-      <col:module document="m16339"/>
-        
-      
-    
-    
-      <col:module document="m16434"/>
-        
-      
-    
-    
-      <col:module document="m16340"/>
-        
-      
-    
-    
-      <col:module document="m16352"/>
-        
-      
-    
-    
-      <col:module document="m16353"/>
-        
-      
-    
-    
-      <col:module document="m17397"/>
-        
-      
-    
-    
-      <col:module document="m17646"/>
-        
-      
-    
+    <col:module document="m16324"/>
+    <col:module document="m16325"/>
+    <col:module document="m16326"/>
+    <col:module document="m16327"/>
+    <col:module document="m16328"/>
+    <col:module document="m16330"/>
+    <col:module document="m16333"/>
+    <col:module document="m16331"/>
+    <col:module document="m16334"/>
+    <col:module document="m16335"/>
+    <col:module document="m16336"/>
+    <col:module document="m16338"/>
+    <col:module document="m16339"/>
+    <col:module document="m16434"/>
+    <col:module document="m16340"/>
+    <col:module document="m16352"/>
+    <col:module document="m16353"/>
+    <col:module document="m17397"/>
+    <col:module document="m17646"/>
   </col:content>
 </col:collection>
